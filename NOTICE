@@ -4,3 +4,24 @@ Copyright 2026 DHCB and contributors
 Licensed under the Apache License, Version 2.0. See LICENSE.
 Third-party components retain their respective licenses.
 Autodesk Revit and AutoCAD are separate products and are not licensed by this repository.
+
+Phạm vi giấy phép
+-----------------
+Mã nguồn, tài liệu, skill và tệp mẫu trong repo phát hành theo Apache-2.0, trừ thành phần bên thứ ba
+dưới đây (giữ giấy phép gốc).
+
+Thành phần bên thứ ba
+---------------------
+- src/DhcbTools.Shared.Logic/Ifc/ifc-schema.txt: bảng thực thể/thuộc tính rút ra từ lược đồ IFC
+  (IFC2X3, IFC4, IFC4X3_ADD2 — buildingSMART International) bằng IfcOpenShell (scripts/gen-ifc-schema.py).
+  Lược đồ IFC thuộc buildingSMART International; IfcOpenShell giữ giấy phép riêng của nó
+  (LGPL-3.0) và không được phân phối kèm repo.
+- Gói NuGet/pip (AutoCAD.NET, Nice3point.Revit.Api.*, Newtonsoft.Json, xunit, pytest, …) không được chép vào repo; mỗi gói giữ
+  giấy phép riêng khi restore/cài.
+
+Nhãn hiệu
+---------
+Autodesk, Revit, AutoCAD, IFC, buildingSMART, Techcombank, VietQR, NAPAS 247 (xuất hiện trên ảnh QR
+docs/assets/donate-vietqr-techcombank.png) và các tên sản phẩm, dịch vụ khác nhắc đến trong repo là
+nhãn hiệu của chủ sở hữu tương ứng. Repo này không liên kết, không được tài trợ hay xác nhận bởi
+các chủ sở hữu đó.
