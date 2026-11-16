@@ -6,6 +6,6 @@
     <AddInId>2E9F5B1A-8F2D-4C7E-9B3A-1D6C4E8F2A70</AddInId>
     <FullClassName>DhcbTools.Revit.App</FullClassName>
     <VendorId>DHCB</VendorId>
-    <VendorDescription>DHCB, https://github.com/seeker19110/Dhcb-Tools</VendorDescription>
+    <VendorDescription>DHCB, https://github.com/www-donghanhcungban-org/Dhcb-Tools</VendorDescription>
   </AddIn>
 </RevitAddIns>

@@ -25,7 +25,7 @@ Dùng thử trên công việc thật: [`docs/thi-diem-su-dung.md`](docs/thi-die
 
 ## Bắt đầu cho kỹ sư: cài → bấm 3 lệnh → thấy kết quả
 
-1. **Cài add-in** — cách nhanh nhất là tải installer ở [Releases](https://github.com/seeker19110/Dhcb-Tools/releases)
+1. **Cài add-in** — cách nhanh nhất là tải installer ở [Releases](https://github.com/www-donghanhcungban-org/Dhcb-Tools/releases)
    (xem chi tiết ở [Cài đặt](#cài-đặt) bên dưới), ~10 phút.
 2. **Mở model đang làm** (Revit hoặc AutoCAD) → tab **DHCB Tools** trên Ribbon.
 3. **Bấm một trong 14 lệnh đã kiểm giá trị rõ** (bậc *hỗ trợ*, xem bảng ở [`docs/tong-quan.md`](docs/tong-quan.md))
@@ -305,7 +305,7 @@ Quy trình đầy đủ (build → cài → file mẫu → checklist Revit/AutoC
 ## Cài đặt
 
 **Cách thường dùng — installer.** Tải `DhcbTools-Setup-<phiên bản>.exe` ở
-[Releases](https://github.com/seeker19110/Dhcb-Tools/releases), chọn phiên bản Revit/AutoCAD cần cài. Installer chạy
+[Releases](https://github.com/www-donghanhcungban-org/Dhcb-Tools/releases), chọn phiên bản Revit/AutoCAD cần cài. Installer chạy
 theo người dùng (không cần quyền admin): add-in Revit vào `%APPDATA%\Autodesk\Revit\Addins\<năm>\`, plugin AutoCAD
 vào bundle `%APPDATA%\Autodesk\ApplicationPlugins\DhcbTools.bundle\` nên **tự nạp khi khởi động, không cần
 `NETLOAD`**. Nguồn: [`installer/dhcb-tools.iss`](installer/dhcb-tools.iss).

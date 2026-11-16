@@ -34,7 +34,7 @@ Mở PowerShell **không** phải admin trừ khi ghi vào `%ProgramData%`.
 ## 2. Lấy mã nguồn và build
 
 ```powershell
-git clone https://github.com/seeker19110/Dhcb-Tools.git D:\DHCB\src
+git clone https://github.com/www-donghanhcungban-org/Dhcb-Tools.git D:\DHCB\src
 cd D:\DHCB\src
 ```
 

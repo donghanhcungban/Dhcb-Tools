@@ -42,7 +42,7 @@ namespace DhcbTools.Shared.Logic.Batch
                 "    <AddInId>" + AddInId + "</AddInId>",
                 "    <FullClassName>DhcbTools.Revit.App</FullClassName>",
                 "    <VendorId>DHCB</VendorId>",
-                "    <VendorDescription>DHCB, https://github.com/seeker19110/Dhcb-Tools</VendorDescription>",
+                "    <VendorDescription>DHCB, https://github.com/www-donghanhcungban-org/Dhcb-Tools</VendorDescription>",
                 "  </AddIn>",
                 "</RevitAddIns>",
                 string.Empty);

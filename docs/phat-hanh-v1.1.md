@@ -1,6 +1,6 @@
 # Phát hành v1.1 và nhóm kỹ sư dùng thật (mục 9.4)
 
-**Bản cho kỹ sư cài: `v1.1.1`** — <https://github.com/seeker19110/Dhcb-Tools/releases/tag/v1.1.1>
+**Bản cho kỹ sư cài: `v1.1.1`** — <https://github.com/www-donghanhcungban-org/Dhcb-Tools/releases/tag/v1.1.1>
 (v1.1.0 cùng ngày có installer treo khi cài im lặng, §46; mã add-in giống hệt). `release.yml` đóng gói và
 đăng lên GitHub Releases. Gói gồm `DhcbTools-Setup-1.1.1.exe`
 (Inno Setup, cài add-in Revit 2023–2025, AutoCAD 2024–2026 và BatchRunner vào
