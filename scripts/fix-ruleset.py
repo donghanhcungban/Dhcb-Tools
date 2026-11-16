@@ -15,7 +15,7 @@ import json
 import subprocess
 import sys
 
-REPO = "seeker19110/Dhcb-Tools"
+REPO = "www-donghanhcungban-org/Dhcb-Tools"
 
 # Cổng ổn định gom toàn bộ job, gồm các hàng ma trận và kiểm script.
 REQUIRED_CHECKS = ["quality-gate"]

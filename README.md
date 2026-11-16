@@ -25,7 +25,7 @@ Dùng thử trên công việc thật: [`docs/thi-diem-su-dung.md`](docs/thi-die
 
 ## Bắt đầu cho kỹ sư: cài → bấm 3 lệnh → thấy kết quả
 
-1. **Cài add-in** — cách nhanh nhất là tải installer ở [Releases](https://github.com/seeker19110/Dhcb-Tools/releases)
+1. **Cài add-in** — cách nhanh nhất là tải installer ở [Releases](https://github.com/www-donghanhcungban-org/Dhcb-Tools/releases)
    (xem chi tiết ở [Cài đặt](#cài-đặt) bên dưới), ~10 phút.
 2. **Mở model đang làm** (Revit hoặc AutoCAD) → tab **DHCB Tools** trên Ribbon.
 3. **Bấm một trong 14 lệnh đã kiểm giá trị rõ** (bậc *hỗ trợ*, xem bảng ở [`docs/tong-quan.md`](docs/tong-quan.md))
@@ -305,7 +305,7 @@ Quy trình đầy đủ (build → cài → file mẫu → checklist Revit/AutoC
 ## Cài đặt
 
 **Cách thường dùng — installer.** Tải `DhcbTools-Setup-<phiên bản>.exe` ở
-[Releases](https://github.com/seeker19110/Dhcb-Tools/releases), chọn phiên bản Revit/AutoCAD cần cài. Installer chạy
+[Releases](https://github.com/www-donghanhcungban-org/Dhcb-Tools/releases), chọn phiên bản Revit/AutoCAD cần cài. Installer chạy
 theo người dùng (không cần quyền admin): add-in Revit vào `%APPDATA%\Autodesk\Revit\Addins\<năm>\`, plugin AutoCAD
 vào bundle `%APPDATA%\Autodesk\ApplicationPlugins\DhcbTools.bundle\` nên **tự nạp khi khởi động, không cần
 `NETLOAD`**. Nguồn: [`installer/dhcb-tools.iss`](installer/dhcb-tools.iss).
@@ -357,6 +357,20 @@ mặc định tối đa 2.000 record, nhận `offset` và trả `hasMore`/`nextO
 AutoRoute và ClashDetection hỗ trợ hủy hợp tác qua Bridge ở giai đoạn được công bố `canCancel=true`.
 Hướng dẫn và giới hạn nghiệm thu: [nâng cấp sản xuất](docs/nang-cap-san-xuat-2026-10-08.md).
 Tổng hợp số liệu thí điểm tại máy: `python scripts/dhcb_pilot.py docs/mau-do-hieu-qua.csv --output out/pilot.html`.
+
+## Ủng hộ và liên hệ
+
+Dự án miễn phí và mở mã. Nếu nó giúp bạn tiết kiệm thời gian, bạn có thể ủng hộ để tác giả duy trì và phát triển tiếp:
+
+<img src="docs/assets/donate-vietqr-techcombank.png" alt="Mã VietQR ủng hộ: Techcombank, số tài khoản 890977819110" width="260">
+
+- Quét mã VietQR bằng ứng dụng ngân hàng bất kỳ, hoặc chuyển khoản **Techcombank — số tài khoản `890977819110`**.
+- Liên hệ, góp ý, hợp tác: điện thoại / Zalo **[+84 977 819 110](https://zalo.me/0977819110)** ·
+  email **admin@donghanhcungban.org**. Lỗi và đề xuất tính năng xin mở issue trên GitHub.
+- **Hỗ trợ triển khai:** tác giả hỗ trợ cài đặt và áp dụng dự án cho nhu cầu của bạn — **trực tiếp tại TP. Hồ Chí Minh**
+  hoặc **online** ở bất kỳ đâu. Liên hệ qua điện thoại/Zalo hoặc email ở trên để trao đổi.
+
+Ủng hộ là tự nguyện, không kèm quyền lợi riêng; hỗ trợ triển khai thoả thuận riêng theo từng dự án.
 
 ## Giấy phép
 

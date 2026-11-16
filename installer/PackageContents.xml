@@ -13,12 +13,12 @@
     Name="DHCB Tools"
     Description="Tự động hoá AutoCAD cho kỹ sư xây dựng — layer, attribute, đánh số, kiểm chuẩn, HTTP Bridge."
     Author="DHCB"
-    HelpFile="https://github.com/seeker19110/Dhcb-Tools"
+    HelpFile="https://github.com/www-donghanhcungban-org/Dhcb-Tools"
     ProductType="Application">
 
   <CompanyDetails
       Name="DHCB"
-      Url="https://github.com/seeker19110/Dhcb-Tools" />
+      Url="https://github.com/www-donghanhcungban-org/Dhcb-Tools" />
 
   <Components Description="AutoCAD 2025">
     <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R25.0" SeriesMax="R25.0" />

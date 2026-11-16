@@ -7,10 +7,10 @@
   "long_description": "Nối Claude vào Revit desktop qua HTTP Bridge của add-in DHCB Tools (127.0.0.1:8765, có token). Gói add-in có profile Revit 2022–2027; kiểm biên dịch không thay thế nghiệm thu trên host thật. Mọi lệnh sửa mô hình mặc định xem trước; chạy thật cần giữ documentId và previewToken của lần xem trước đã duyệt.\n\nAgent đọc hình học, tham số, ảnh view và kiểm lại changedIds của phần tử vừa đổi. Dự án dùng giấy phép Apache-2.0.",
   "author": {
     "name": "DHCB",
-    "url": "https://github.com/seeker19110/Dhcb-Tools"
+    "url": "https://github.com/www-donghanhcungban-org/Dhcb-Tools"
   },
-  "homepage": "https://github.com/seeker19110/Dhcb-Tools",
-  "documentation": "https://github.com/seeker19110/Dhcb-Tools/blob/main/docs/agent-khep-vong.md",
+  "homepage": "https://github.com/www-donghanhcungban-org/Dhcb-Tools",
+  "documentation": "https://github.com/www-donghanhcungban-org/Dhcb-Tools/blob/main/docs/agent-khep-vong.md",
   "keywords": [
     "revit",
     "bim",
