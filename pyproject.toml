@@ -13,7 +13,7 @@ classifiers = ["Operating System :: Microsoft :: Windows"]
 dependencies = []
 
 [project.optional-dependencies]
-autocad-panel = ["fastmcp==4.1.4"]
+autocad-panel = ["fastmcp==4.1.8"]
 dev = ["pytest>=8,<10", "pyflakes>=3,<5", "coverage>=7,<8"]
 
 [tool.pytest.ini_options]
