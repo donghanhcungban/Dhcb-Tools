@@ -87,6 +87,7 @@
 - §82 — [`EntityEdit` op `dimension` — tạo DIM thẳng hàng qua Bridge/MCP (2026-11-14)](#82-entityedit-op-dimension-tạo-dim-thẳng-hàng-qua-bridgemcp-2026-11-14)
 - §83 — [`query` trả dim style và hình học của DIM (2026-11-14)](#83-query-trả-dim-style-và-hình-học-của-dim-2026-11-14)
 - §84 — [Chỉ hỗ trợ .NET 10: AutoCAD 2025–2027 và Revit 2027 (2026-11-14)](#84-chỉ-hỗ-trợ-net-10-autocad-20252027-và-revit-2027-2026-11-14)
+- §85 — [EntityEdit giữ block động khi copy, đặt tham số động; query trả tham số động (2026-11-18)](#85-entityedit-giữ-block-động-khi-copy-đặt-tham-số-động-query-trả-tham-số-động-2026-11-18)
 <!-- muc-luc:ket-thuc -->
 
 **Khoảng thời gian:** 2026-09-02 → 2026-09-05 · **Repo:** https://github.com/seeker19110/Dhcb-Tools
