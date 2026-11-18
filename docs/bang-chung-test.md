@@ -4069,3 +4069,19 @@ installer thật (Inno Setup 6) 17/17 với ca mới "host .NET 8 bị từ ch�
 Chưa chứng minh: chạy `release.yml` đầy đủ (chỉ chạy khi tạo tag) và cài gói mới trên máy có AutoCAD 2025/2027,
 Revit 2027.
 
+
+## 85. EntityEdit giữ block động khi copy, đặt tham số động; query trả tham số động (2026-11-18)
+
+Phát hiện khi chia ống gió SEAD tầng hầm 2 (Tháp A): `copy` dùng `GetTransformedCopy` (bản sao nông) nên ống
+`duct-TDC-keo` (block động) chép ra thành `*U…` tĩnh, mất grip kéo dài. Sửa: `copy`/`array`/`mirror` của block reference
+động (hoặc có extension dictionary) nhân bản sâu bằng `DeepCloneObjects` như lệnh COPY. Thêm `set` nhận `"dynamic"`
+(tên tham số → giá trị, chuyển theo kiểu tham số hiện có) và `entity_geometry` trả `dynamicProperties` cho block động.
+
+Kiểm: test .NET 2443/2443 (thêm ca planner `dynamic`), Python 382 ca đạt. Chạy thật bằng BatchRunner (accoreconsole
+AutoCAD 2026, bundle đã thay) trên bản sao DWG tầng hầm 2: một bước EntityEdit 733 thao tác — 33 ống 1400 có miệng gió
+EAG1200 chia thành 800 + 1110 + 600 (mượn một đốt của đoạn 1110 kế bên bằng `set dynamic Distance2`), 84 miệng gió
+MG600, 244 DIM mới — "Đã chạy 733 thao tác: tạo 429, sửa 47, xoá 285"; đọc lại: 0 miệng gió EAG1200, 0 `*U` trên layer
+ống, mọi ống mới là `duct-TDC-keo` với `Distance2` đúng, các tuyến liền mạch không chồng lấn.
+
+Chưa chứng minh: lệnh trong AutoCAD GUI qua Bridge (chỉ chạy qua accoreconsole); block động có tham số kiểu khác
+số thực (visibility, lookup) chưa thử thật.

@@ -251,6 +251,12 @@ public sealed class EntityEditCommand : ICoreCommand<EntityEditConfig>
                 case EntityOpKind.Set:
                     if (op.Layer != null) PreviewLayer(tr, step, op.Layer);
                     CheckWidthTargets(step, real);
+                    if (op.Dynamic != null)
+                    {
+                        CheckDynamicTargets(step, real);
+                        foreach (var entity in real) SetDynamic(step, (BlockReference)entity, op.Dynamic, write: false);
+                    }
+
                     goto default;
                 case EntityOpKind.Trim:
                 case EntityOpKind.ReplacePoints:
@@ -594,6 +600,11 @@ public sealed class EntityEditCommand : ICoreCommand<EntityEditConfig>
                             else ((Polyline2d)entity).ConstantWidth = width;
                         }
 
+                        if (op.Dynamic != null)
+                        {
+                            SetDynamic(step, (BlockReference)entity, op.Dynamic, write: true);
+                        }
+
                         MarkModified(entity);
                     }
 
@@ -781,6 +792,69 @@ public sealed class EntityEditCommand : ICoreCommand<EntityEditConfig>
             return string.IsNullOrWhiteSpace(op.Layer) ? null : op.Layer!.Trim();
         }
 
+        /// <summary><c>set dynamic</c> chỉ có nghĩa với block reference động.</summary>
+        private static void CheckDynamicTargets(EntityEditStep step, List<Entity> targets)
+        {
+            var wrong = targets.FirstOrDefault(e => e is not BlockReference { IsDynamicBlock: true });
+            if (wrong != null)
+            {
+                throw new StepException(step, $"{AcadHelpers.HandleOf(wrong.ObjectId)} không phải block động — dynamic chỉ đặt cho block động.");
+            }
+        }
+
+        /// <summary>
+        /// Đặt tham số block động theo tên (không phân biệt hoa thường). Giá trị chuyển theo kiểu của tham số hiện có
+        /// (số thực, số nguyên, chuỗi — vd trạng thái Visibility). <paramref name="write"/> = false chỉ kiểm tên/kiểu.
+        /// </summary>
+        private static void SetDynamic(EntityEditStep step, BlockReference block, Dictionary<string, string> values, bool write)
+        {
+            if (!block.IsDynamicBlock)
+            {
+                throw new StepException(step, $"{AcadHelpers.HandleOf(block.ObjectId)} không phải block động — dynamic chỉ đặt cho block động.");
+            }
+
+            var props = block.DynamicBlockReferencePropertyCollection.Cast<DynamicBlockReferenceProperty>().ToList();
+            foreach (var pair in values)
+            {
+                var prop = props.FirstOrDefault(p => string.Equals(p.PropertyName, pair.Key.Trim(), StringComparison.OrdinalIgnoreCase));
+                if (prop == null)
+                {
+                    throw new StepException(step, $"{AcadHelpers.HandleOf(block.ObjectId)} không có tham số động \"{pair.Key}\" (có: {string.Join(", ", props.Select(p => p.PropertyName))}).");
+                }
+
+                if (prop.ReadOnly)
+                {
+                    throw new StepException(step, $"tham số động \"{prop.PropertyName}\" chỉ đọc.");
+                }
+
+                object value;
+                try
+                {
+                    value = prop.Value switch
+                    {
+                        double => double.Parse(pair.Value, System.Globalization.CultureInfo.InvariantCulture),
+                        short => short.Parse(pair.Value, System.Globalization.CultureInfo.InvariantCulture),
+                        int => int.Parse(pair.Value, System.Globalization.CultureInfo.InvariantCulture),
+                        _ => pair.Value,
+                    };
+                }
+                catch (FormatException)
+                {
+                    throw new StepException(step, $"giá trị \"{pair.Value}\" không hợp kiểu của tham số động \"{prop.PropertyName}\" ({prop.Value?.GetType().Name}).");
+                }
+
+                if (!write) continue;
+                try
+                {
+                    prop.Value = value;
+                }
+                catch (Autodesk.AutoCAD.Runtime.Exception ex)
+                {
+                    throw new StepException(step, $"không đặt được \"{prop.PropertyName}\" = {pair.Value} ({ex.ErrorStatus}).");
+                }
+            }
+        }
+
         /// <summary><c>set width</c> chỉ có nghĩa với polyline (LWPOLYLINE hoặc POLYLINE 2D).</summary>
         private static void CheckWidthTargets(EntityEditStep step, List<Entity> targets)
         {
@@ -893,6 +967,24 @@ public sealed class EntityEditCommand : ICoreCommand<EntityEditConfig>
 
         private static ObjectId CopyOf(Transaction tr, EntityEditStep step, Entity source, Matrix3d matrix)
         {
+            if (source is BlockReference { IsDynamicBlock: true } || (source is BlockReference && !source.ExtensionDictionary.IsNull))
+            {
+                // GetTransformedCopy là bản sao nông: block động mất liên kết định nghĩa (thành *U… tĩnh, hết grip
+                // kéo dài). Nhân bản sâu như lệnh COPY giữ nguyên tham số động, attribute và extension dictionary.
+                try
+                {
+                    var map = new IdMapping();
+                    source.Database.DeepCloneObjects(new ObjectIdCollection { source.ObjectId }, source.OwnerId, map, false);
+                    var cloned = (Entity)tr.GetObject(map[source.ObjectId].Value, OpenMode.ForWrite);
+                    cloned.TransformBy(matrix);
+                    return cloned.ObjectId;
+                }
+                catch (Autodesk.AutoCAD.Runtime.Exception ex)
+                {
+                    throw new StepException(step, $"không sao chép được {AcadHelpers.HandleOf(source.ObjectId)} ({ex.ErrorStatus}).");
+                }
+            }
+
             Entity copy;
             try
             {
