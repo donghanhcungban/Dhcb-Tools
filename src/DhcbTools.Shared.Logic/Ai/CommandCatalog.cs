@@ -446,7 +446,7 @@ namespace DhcbTools.Shared.Logic.Ai
             new CommandDescriptor("AttributeImport", AutoCad, "Nhập CSV ghi ngược attribute vào block", true)
                 .Field("inputPath", "file CSV").Field("dryRun", "xem trước")
                 .Words("nhập attribute", "import attribute"),
-            new CommandDescriptor("TextReplace", AutoCad, "Tìm/thay văn bản trong Text, MText, Attribute (regex)", true, "FindReplace")
+            new CommandDescriptor("TextReplace", AutoCad, "Tìm/thay văn bản trong Text, MText (cả chữ MLeader), Attribute (regex)", true, "FindReplace")
                 .Field("find", "chuỗi/regex").Field("replace", "thay bằng").Field("useRegex", "regex").Field("dryRun", "xem trước")
                 .Field("ignoreCase", "không phân biệt hoa/thường", FieldKind.Bool).Field("multiline", "regex khớp từng dòng", FieldKind.Bool)
                 .Field("scope", "All, ModelSpace, PaperSpace hoặc BlockDefinitions").Field("layerContains", "lọc tên layer chứa chuỗi")

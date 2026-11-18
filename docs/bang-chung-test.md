@@ -4084,5 +4084,10 @@ EAG1200 chia thành 800 + 1110 + 600 (mượn một đốt của đoạn 1110 k�
 MG600, 244 DIM mới — "Đã chạy 733 thao tác: tạo 429, sửa 47, xoá 285"; đọc lại: 0 miệng gió EAG1200, 0 `*U` trên layer
 ống, mọi ống mới là `duct-TDC-keo` với `Distance2` đúng, các tuyến liền mạch không chồng lấn.
 
-Chưa chứng minh: lệnh trong AutoCAD GUI qua Bridge (chỉ chạy qua accoreconsole); block động có tham số kiểu khác
-số thực (visibility, lookup) chưa thử thật.
+`TextReplace` nay sửa cả chữ của MLeader (`includeMText`): chạy thật qua BatchRunner trên cùng bản vẽ, xem trước
+"Sẽ thay 4 đối tượng văn bản" ([MLeader] 379D6/379DE/379DF/379E0), chạy thật đổi "08x/16x EAG1200x350+OBD" thành
+"16x/32x EAG600x350+OBD"; đọc lại bằng truy vấn `text` thấy đúng 4 nhãn mới. Sau khi thay bundle, Bridge trong AutoCAD GUI
+đọc được `dynamicProperties` của ống mới.
+
+Chưa chứng minh: lệnh ghi (EntityEdit `dynamic`, TextReplace MLeader) gọi qua Bridge trong AutoCAD GUI (mới chạy qua
+accoreconsole); block động có tham số kiểu khác số thực (visibility, lookup) chưa thử thật.
