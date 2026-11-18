@@ -690,6 +690,15 @@ public static class AcadQueryHandler
                 row["rotationDeg"] = Math.Round(br.Rotation * 180 / Math.PI, 4);
                 row["scale"]       = new { x = br.ScaleFactors.X, y = br.ScaleFactors.Y, z = br.ScaleFactors.Z };
                 row["attributes"]  = AttributeValues(br, tr);
+                if (br.IsDynamicBlock)
+                {
+                    // Tham số block động (chiều dài, visibility…) — tên dùng cho EntityEdit op set "dynamic".
+                    row["dynamicProperties"] = br.DynamicBlockReferencePropertyCollection.Cast<DynamicBlockReferenceProperty>()
+                        .Where(p => p.PropertyName != "Origin")
+                        .Select(p => new { name = p.PropertyName, value = p.Value is double d ? (object)Math.Round(d, 6) : p.Value?.ToString(), readOnly = p.ReadOnly })
+                        .ToList();
+                }
+
                 break;
         }
     }

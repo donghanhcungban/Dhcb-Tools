@@ -169,7 +169,7 @@ public class EntityEditPlannerTests
             [
               {"op":"explode","handles":["2A1"],"layerMap":{"0":"M-ONG-GIO"},"layer":"M-PHU-KIEN","id":"manh"},
               {"op":"set","handles":["@manh"],"color":256},
-              {"op":"set","handles":["3B"],"layer":"M-ONG","color":0,"width":0},
+              {"op":"set","handles":["3B"],"layer":"M-ONG","color":0,"width":0,"dynamic":{"Distance1":800}},
               {"op":"trim","handles":["3B"],"from":[100,0]},
               {"op":"trim","handles":["3C"],"from":[0,0],"to":[50,0]},
               {"op":"replacePoints","handles":["3D"],"points":[[0,0],[10,0],[10,10]],"closed":false,"width":2}
@@ -192,6 +192,9 @@ public class EntityEditPlannerTests
     [InlineData("""{"op":"set","handles":["1F"],"width":-1}""", "width")]
     [InlineData("""{"op":"set","handles":["1F"],"layer":" "}""", "layer rỗng")]
     [InlineData("""{"op":"set","handles":["1F"],"color":1,"id":"x"}""", "\"id\"")]
+    [InlineData("""{"op":"set","handles":["1F"],"dynamic":{}}""", "cặp tên tham số")]
+    [InlineData("""{"op":"set","handles":["1F"],"dynamic":{" ":"800"}}""", "cặp tên tham số")]
+    [InlineData("""{"op":"move","handles":["1F"],"delta":[1,0],"dynamic":{"Distance1":"800"}}""", "chỉ dùng cho set")]
     [InlineData("""{"op":"explode","handles":["1F"],"color":1}""", "\"set\"")]
     [InlineData("""{"op":"explode","handles":["1F"],"layerMap":{}}""", "layerMap rỗng")]
     [InlineData("""{"op":"explode","handles":["1F"],"layerMap":{"0":" "}}""", "tên layer rỗng")]

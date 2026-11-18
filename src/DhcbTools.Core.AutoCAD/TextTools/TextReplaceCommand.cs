@@ -6,7 +6,7 @@ using DhcbTools.Shared.Logic.Cad;
 namespace DhcbTools.Core.AutoCAD.TextTools;
 
 /// <summary>
-/// Tìm/thay văn bản trong DBText, MText và AttributeReference — duyệt mọi Block Table Record
+/// Tìm/thay văn bản trong DBText, MText (kể cả chữ của MLeader) và AttributeReference — duyệt mọi Block Table Record
 /// (Model Space, Paper Space và cả block definition) chứ không chỉ Model Space, vì text hay nằm
 /// trong block định nghĩa (title block, ghi chú lặp lại). Bỏ qua block của xref và block anonymous.
 /// <para>
@@ -181,6 +181,14 @@ public sealed class TextReplaceCommand : ICoreCommand<TextReplaceConfig>
                     case MText mtext when config.IncludeMText && string.IsNullOrEmpty(config.AttributeTag) && LayerMatches(mtext):
                         PlanMText(mtext, entityId, "MText", mtext.Contents);
                         break;
+                    // Nhãn MLeader (ghi chú ống, miệng gió…) — chữ là một MText bản sao, sửa xong phải gán lại.
+                    case MLeader leader when config.IncludeMText && string.IsNullOrEmpty(config.AttributeTag)
+                        && leader.ContentType == ContentType.MTextContent && LayerMatches(leader):
+                        using (var mt = leader.MText)
+                        {
+                            if (mt != null) PlanMText(leader, entityId, "MLeader", mt.Contents);
+                        }
+                        break;
                     case BlockReference blockRef when config.IncludeAttributes:
                         foreach (ObjectId attId in blockRef.AttributeCollection)
                         {
@@ -278,6 +286,13 @@ public sealed class TextReplaceCommand : ICoreCommand<TextReplaceConfig>
                     break;
                 case MText mtext:
                     mtext.Contents = newValue;
+                    break;
+                case MLeader leader:
+                    using (var mt = leader.MText)
+                    {
+                        mt.Contents = newValue;
+                        leader.MText = mt;
+                    }
                     break;
             }
         }

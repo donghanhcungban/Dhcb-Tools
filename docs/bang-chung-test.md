@@ -87,6 +87,7 @@
 - §82 — [`EntityEdit` op `dimension` — tạo DIM thẳng hàng qua Bridge/MCP (2026-11-14)](#82-entityedit-op-dimension-tạo-dim-thẳng-hàng-qua-bridgemcp-2026-11-14)
 - §83 — [`query` trả dim style và hình học của DIM (2026-11-14)](#83-query-trả-dim-style-và-hình-học-của-dim-2026-11-14)
 - §84 — [Chỉ hỗ trợ .NET 10: AutoCAD 2025–2027 và Revit 2027 (2026-11-14)](#84-chỉ-hỗ-trợ-net-10-autocad-20252027-và-revit-2027-2026-11-14)
+- §85 — [EntityEdit giữ block động khi copy, đặt tham số động; query trả tham số động (2026-11-18)](#85-entityedit-giữ-block-động-khi-copy-đặt-tham-số-động-query-trả-tham-số-động-2026-11-18)
 <!-- muc-luc:ket-thuc -->
 
 **Khoảng thời gian:** 2026-09-02 → 2026-09-05 · **Repo:** https://github.com/seeker19110/Dhcb-Tools
@@ -4069,3 +4070,28 @@ installer thật (Inno Setup 6) 17/17 với ca mới "host .NET 8 bị từ ch�
 Chưa chứng minh: chạy `release.yml` đầy đủ (chỉ chạy khi tạo tag) và cài gói mới trên máy có AutoCAD 2025/2027,
 Revit 2027.
 
+
+## 85. EntityEdit giữ block động khi copy, đặt tham số động; query trả tham số động (2026-11-18)
+
+Phát hiện khi chia ống gió SEAD tầng hầm 2 (Tháp A): `copy` dùng `GetTransformedCopy` (bản sao nông) nên ống
+`duct-TDC-keo` (block động) chép ra thành `*U…` tĩnh, mất grip kéo dài. Sửa: `copy`/`array`/`mirror` của block reference
+động (hoặc có extension dictionary) nhân bản sâu bằng `DeepCloneObjects` như lệnh COPY. Thêm `set` nhận `"dynamic"`
+(tên tham số → giá trị, chuyển theo kiểu tham số hiện có) và `entity_geometry` trả `dynamicProperties` cho block động.
+
+Kiểm: test .NET 2443/2443 (thêm ca planner `dynamic`), Python 382 ca đạt. Chạy thật bằng BatchRunner (accoreconsole
+AutoCAD 2026, bundle đã thay) trên bản sao DWG tầng hầm 2: một bước EntityEdit 733 thao tác — 33 ống 1400 có miệng gió
+EAG1200 chia thành 800 + 1110 + 600 (mượn một đốt của đoạn 1110 kế bên bằng `set dynamic Distance2`), 84 miệng gió
+MG600, 244 DIM mới — "Đã chạy 733 thao tác: tạo 429, sửa 47, xoá 285"; đọc lại: 0 miệng gió EAG1200, 0 `*U` trên layer
+ống, mọi ống mới là `duct-TDC-keo` với `Distance2` đúng, các tuyến liền mạch không chồng lấn.
+
+`TextReplace` nay sửa cả chữ của MLeader (`includeMText`): chạy thật qua BatchRunner trên cùng bản vẽ, xem trước
+"Sẽ thay 4 đối tượng văn bản" ([MLeader] 379D6/379DE/379DF/379E0), chạy thật đổi "08x/16x EAG1200x350+OBD" thành
+"16x/32x EAG600x350+OBD"; đọc lại bằng truy vấn `text` thấy đúng 4 nhãn mới. Sau khi thay bundle, Bridge trong AutoCAD GUI
+đọc được `dynamicProperties` của ống mới.
+
+Qua Bridge trong AutoCAD GUI (cùng bản vẽ, đang mở): EntityEdit 18 thao tác chia lại 3 tuyến ống dài hơn 1110 (copy
+block động + `set dynamic Distance2` + move, xem trước rồi ghi thật) — "Đã chạy 18 thao tác: tạo 8, sửa 5, xoá 5"; đọc
+lại `dynamicProperties` và hình học: 1110 + 1034.6, 4440 + 648 + 646.9, 7770 + 761.2, nối liền không hở.
+
+Chưa chứng minh: TextReplace MLeader qua Bridge GUI (mới chạy qua accoreconsole); block động có tham số kiểu khác số
+thực (visibility, lookup) chưa thử thật.

@@ -98,6 +98,10 @@ namespace DhcbTools.Shared.Logic.Cad
 
         /// <summary>Offset: khoảng cách; dấu quyết định phía (theo quy ước <c>GetOffsetCurves</c> của AutoCAD).</summary>
         public double? Distance { get; set; }
+
+        /// <summary>Set: tham số block động cần đặt, tên → giá trị (vd <c>{"Distance1": "800"}</c>); tên lấy từ
+        /// <c>dynamicProperties</c> của truy vấn <c>entity_geometry</c>.</summary>
+        public Dictionary<string, string>? Dynamic { get; set; }
     }
 
     /// <summary>Loại op đã chuẩn hoá — mã <see cref="EntityEditPlanner"/> đã kiểm đủ trường cho từng loại.</summary>
@@ -426,7 +430,9 @@ namespace DhcbTools.Shared.Logic.Cad
 
                     break;
                 case EntityOpKind.Set:
-                    Need(op.Layer != null || op.Color != null || op.Width != null, "cần ít nhất một trong layer, color, width.");
+                    Need(op.Layer != null || op.Color != null || op.Width != null || op.Dynamic != null, "cần ít nhất một trong layer, color, width, dynamic.");
+                    Need(op.Dynamic == null || (op.Dynamic.Count > 0 && op.Dynamic.All(p => p.Key.Trim().Length > 0 && p.Value != null)),
+                        "dynamic phải có ít nhất một cặp tên tham số → giá trị.");
                     Need(op.Color == null || (op.Color >= 0 && op.Color <= 256), "color phải là ACI 0–256 (0 = ByBlock, 256 = ByLayer).");
                     Need(op.Width == null || (IsFinite(op.Width.Value) && op.Width >= 0), "width (bề rộng đều polyline) phải ≥ 0.");
                     break;
@@ -445,6 +451,11 @@ namespace DhcbTools.Shared.Logic.Cad
             if (step.Kind != EntityOpKind.Explode && op.LayerMap != null)
             {
                 errors.Add($"{name}: \"layerMap\" chỉ dùng cho explode.");
+            }
+
+            if (step.Kind != EntityOpKind.Set && op.Dynamic != null)
+            {
+                errors.Add($"{name}: \"dynamic\" chỉ dùng cho set.");
             }
         }
 
