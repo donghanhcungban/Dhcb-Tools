@@ -4089,5 +4089,9 @@ MG600, 244 DIM mới — "Đã chạy 733 thao tác: tạo 429, sửa 47, xoá 2
 "16x/32x EAG600x350+OBD"; đọc lại bằng truy vấn `text` thấy đúng 4 nhãn mới. Sau khi thay bundle, Bridge trong AutoCAD GUI
 đọc được `dynamicProperties` của ống mới.
 
-Chưa chứng minh: lệnh ghi (EntityEdit `dynamic`, TextReplace MLeader) gọi qua Bridge trong AutoCAD GUI (mới chạy qua
-accoreconsole); block động có tham số kiểu khác số thực (visibility, lookup) chưa thử thật.
+Qua Bridge trong AutoCAD GUI (cùng bản vẽ, đang mở): EntityEdit 18 thao tác chia lại 3 tuyến ống dài hơn 1110 (copy
+block động + `set dynamic Distance2` + move, xem trước rồi ghi thật) — "Đã chạy 18 thao tác: tạo 8, sửa 5, xoá 5"; đọc
+lại `dynamicProperties` và hình học: 1110 + 1034.6, 4440 + 648 + 646.9, 7770 + 761.2, nối liền không hở.
+
+Chưa chứng minh: TextReplace MLeader qua Bridge GUI (mới chạy qua accoreconsole); block động có tham số kiểu khác số
+thực (visibility, lookup) chưa thử thật.
