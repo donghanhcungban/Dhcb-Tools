@@ -88,6 +88,7 @@
 - §83 — [`query` trả dim style và hình học của DIM (2026-11-14)](#83-query-trả-dim-style-và-hình-học-của-dim-2026-11-14)
 - §84 — [Chỉ hỗ trợ .NET 10: AutoCAD 2025–2027 và Revit 2027 (2026-11-14)](#84-chỉ-hỗ-trợ-net-10-autocad-20252027-và-revit-2027-2026-11-14)
 - §85 — [EntityEdit giữ block động khi copy, đặt tham số động; query trả tham số động (2026-11-18)](#85-entityedit-giữ-block-động-khi-copy-đặt-tham-số-động-query-trả-tham-số-động-2026-11-18)
+- §86 — [Lệnh `DrawingSave`: Bridge tự lưu bản vẽ đang mở (2026-11-18)](#86-lệnh-drawingsave-bridge-tự-lưu-bản-vẽ-đang-mở-2026-11-18)
 <!-- muc-luc:ket-thuc -->
 
 **Khoảng thời gian:** 2026-09-02 → 2026-09-05 · **Repo:** https://github.com/seeker19110/Dhcb-Tools
@@ -4095,3 +4096,18 @@ lại `dynamicProperties` và hình học: 1110 + 1034.6, 4440 + 648 + 646.9, 77
 
 Chưa chứng minh: TextReplace MLeader qua Bridge GUI (mới chạy qua accoreconsole); block động có tham số kiểu khác số
 thực (visibility, lookup) chưa thử thật.
+
+## 86. Lệnh `DrawingSave`: Bridge tự lưu bản vẽ đang mở (2026-11-18)
+
+Trước đây Bridge không lưu được: sửa qua `EntityEdit` xong phải nhờ kỹ sư bấm Ctrl+S (phiên 2026-11-18 đành gửi phím
+vào cửa sổ AutoCAD). Thêm lệnh Core `DrawingSave`: lưu đè đúng file của bản vẽ đang mở bằng `Database.SaveAs`, giữ
+`OriginalFileVersion` (không nâng định dạng DWG), tạo .bak; chỉ lưu tại chỗ — từ chối Drawing chưa đặt tên/file mẫu
+.dwt, file đã biến mất, file chỉ đọc (`DrawingSavePlanner`, có test); kiểm giờ ghi file đổi rồi mới báo "Đã lưu".
+Xem trước mặc định như mọi lệnh ghi qua Bridge.
+
+Kiểm: test .NET 2450/2450 (thêm 7 ca `DrawingSavePlannerTests`), Python 382 ca; bộ ca kiểm thêm một ca xem trước
+(`autocad-smoke`) và một ca ghi thật trên bản chép (`autocad-write`). Chạy thật qua Bridge trong AutoCAD 2026 GUI trên
+bản vẽ tầng hầm 2 Tháp A: xem trước "Sẽ lưu đè … (giữ định dạng AC1021, tạo .bak)", chạy thật "Đã lưu … (22,799 KB,
+định dạng AC1021)", giờ ghi file đổi 10:10:19 → 10:11:01, đầu file vẫn `AC1021` như bản gốc.
+
+Chưa chứng minh: chạy hai ca mới của bộ ca kiểm qua `scripts/run-in-autocad-tests.ps1` (accoreconsole).

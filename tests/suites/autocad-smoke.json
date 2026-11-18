@@ -343,6 +343,19 @@
         ],
         "maxMs": 30000
       }
+    },
+    {
+      "name": "Xem trước lưu bản vẽ đang mở",
+      "command": "DrawingSave",
+      "config": {},
+      "expect": {
+        "success": true,
+        "summaryContains": [
+          "Xem trước",
+          "Sẽ lưu đè"
+        ],
+        "maxMs": 30000
+      }
     }
   ]
 }

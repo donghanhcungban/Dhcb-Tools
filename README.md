@@ -130,7 +130,7 @@ Ribbon/dòng lệnh, HTTP Bridge, batch runner, lớp AI. Danh mục đầy đ�
 | Nhóm | Revit | AutoCAD |
 |---|---|---|
 | Dữ liệu ↔ CSV | `ParameterExport` / `ParameterImport` | `LayerExport` / `LayerImport`, `AttributeExport` / `AttributeImport` |
-| Dọn dẹp | `RemoveUnusedViews` | `DrawingCleanup` (an toàn: CLAYER, linetype của layer, xref) |
+| Dọn dẹp | `RemoveUnusedViews` | `DrawingCleanup` (an toàn: CLAYER, linetype của layer, xref), `DrawingSave` (lưu đè bản vẽ đang mở về đúng file, giữ định dạng gốc) |
 | Đánh số | `AutoNumbering` (theo vị trí), `FlowNumbering` (theo dòng chảy) | `AutoNumbering` (block attribute) |
 | Xuất & báo cáo | `BatchExport` (PDF/DWG/IFC/NWC), `HealthReport`, `SetoutExport` (toạ độ định vị cho máy toàn đạc, [`docs/toa-do-dinh-vi.md`](docs/toa-do-dinh-vi.md)) | `XrefAudit`, `XrefAttach` (gắn DWG làm xref overlay/attach theo điểm chèn, tỉ lệ, góc, layer) |
 | Kiểm tra | `ParameterRuleCheck`, `ClashDetection` (+ `clash-accepted.json`), `ConnectorChecker`, `IdsValidate` (IDS 1.0 buildingSMART, [`docs/kiem-ids.md`](docs/kiem-ids.md)) | `LayerStandardCheck`, `TextReplace` |

@@ -1729,6 +1729,25 @@
           "tâm (-500, 300) tỉ lệ 1:20 (CustomScale 0.05)"
         ]
       }
+    },
+    {
+      "name": "Lưu bản vẽ đang mở về đúng file — GHI THẬT",
+      "command": "DrawingSave",
+      "allowWrite": true,
+      "config": {
+        "dryRun": false
+      },
+      "expect": {
+        "success": true,
+        "summaryContains": [
+          "Đã lưu"
+        ],
+        "maxMs": 60000,
+        "summaryNotContains": [
+          "Xem trước"
+        ]
+      },
+      "//": "Chạy trên BẢN CHÉP của bản vẽ mẫu; lệnh kiểm giờ ghi file đổi rồi mới báo đã lưu."
     }
   ]
 }
