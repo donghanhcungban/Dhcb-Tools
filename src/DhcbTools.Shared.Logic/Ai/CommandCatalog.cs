@@ -434,6 +434,9 @@ namespace DhcbTools.Shared.Logic.Ai
                 .Field("removeEmptyLayers", "xóa layer rỗng").Field("purgeUnusedBlocks", "dọn block không dùng")
                 .Field("purgeUnusedLinetypes", "dọn kiểu nét không dùng").Field("keepLayerNameContains", "giữ layer có tên chứa các chuỗi này", FieldKind.TextList)
                 .Words("dọn bản vẽ", "purge", "cleanup drawing", "dọn layer"),
+            new CommandDescriptor("DrawingSave", AutoCad, "Lưu đè bản vẽ đang mở về đúng file của nó (như QSAVE, giữ định dạng DWG gốc, tạo .bak) — từ chối Drawing chưa đặt tên/file chỉ đọc", true, "Save", "QSave")
+                .Field("createBackup", "giữ bản trước thành file .bak (mặc định true)", FieldKind.Bool).Field("dryRun", "xem trước")
+                .Words("lưu bản vẽ", "lưu file", "save drawing", "qsave"),
             new CommandDescriptor("AutoNumbering", AutoCad, "Đánh số Block Reference theo attribute", true, "AutoNumber")
                 .Field("blockName", "tên block").Field("attributeTag", "tag").Field("prefix", "tiền tố").Field("dryRun", "xem trước")
                 .Field("startNumber", "số bắt đầu").Field("step", "bước nhảy", FieldKind.Number).Field("padWidth", "số chữ số tối thiểu")

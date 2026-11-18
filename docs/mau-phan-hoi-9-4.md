@@ -87,13 +87,14 @@ Mốc của roadmap: **≥ 5 kỹ sư dùng hằng tuần không cần hỏi** s
 | `SpecToConfig` | AI offline: trích tầng/cao độ/hệ từ thuyết minh → config | ☐ | ☐ | ☐ | |
 | `DictionaryLearn` | AI offline: soi tên tham số thật của dự án → dictionary.json | ☐ | ☐ | ☐ | |
 
-## AutoCAD — 22 lệnh
+## AutoCAD — 23 lệnh
 
 | Lệnh | Việc nó làm | Tuần | Bỏ | Chưa | Nếu bỏ: vì sao |
 |---|---|:--:|:--:|:--:|---|
 | `LayerExport` | Xuất layer ra CSV | ☐ | ☐ | ☐ | |
 | `LayerImport` | Nhập layer từ CSV (sửa được cả layer xref `XREF\|LAYER` đã có) | ☐ | ☐ | ☐ | |
 | `DrawingCleanup` | Dọn layer rỗng, block/linetype/textstyle/dimstyle không dùng | ☐ | ☐ | ☐ | |
+| `DrawingSave` | Lưu đè bản vẽ đang mở về đúng file (như QSAVE) — agent sửa qua Bridge xong tự lưu | ☐ | ☐ | ☐ | |
 | `AutoNumbering` | Đánh số Block Reference theo attribute | ☐ | ☐ | ☐ | |
 | `AttributeExport` | Xuất attribute của block ra CSV | ☐ | ☐ | ☐ | |
 | `AttributeImport` | Nhập CSV ghi ngược attribute vào block | ☐ | ☐ | ☐ | |

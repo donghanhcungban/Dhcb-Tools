@@ -38,6 +38,7 @@ public static class AcadCommandTable
                 "LAYEREXPORT" => new LayerExportCommand().Execute(db, Deserialize<LayerExportConfig>(configJson)),
                 "LAYERIMPORT" => new LayerImportCommand().Execute(db, Deserialize<LayerImportConfig>(configJson)),
                 "DRAWINGCLEANUP" => new DrawingCleanupCommand().Execute(db, Deserialize<CleanupConfig>(configJson)),
+                "DRAWINGSAVE" => new DrawingSaveCommand().Execute(db, Deserialize<DrawingSaveConfig>(configJson)),
                 "AUTONUMBERING" => new AutoNumberingCommand().Execute(db, Deserialize<AutoNumberingConfig>(configJson)),
                 "ATTRIBUTEEXPORT" => new AttributeExportCommand().Execute(db, Deserialize<AttributeExportConfig>(configJson)),
                 "ATTRIBUTEIMPORT" => new AttributeImportCommand().Execute(db, Deserialize<AttributeImportConfig>(configJson)),
