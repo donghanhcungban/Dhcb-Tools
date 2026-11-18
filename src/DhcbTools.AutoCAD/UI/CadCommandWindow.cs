@@ -28,7 +28,7 @@ public sealed class CadCommandWindow : Window
     private static readonly IReadOnlyDictionary<string, Type> ConfigTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
     {
         ["LayerExport"] = typeof(LayerExportConfig), ["LayerImport"] = typeof(LayerImportConfig),
-        ["DrawingCleanup"] = typeof(CleanupConfig), ["AutoNumbering"] = typeof(AutoNumberingConfig),
+        ["DrawingCleanup"] = typeof(CleanupConfig), ["DrawingSave"] = typeof(DrawingSaveConfig), ["AutoNumbering"] = typeof(AutoNumberingConfig),
         ["AttributeExport"] = typeof(AttributeExportConfig), ["AttributeImport"] = typeof(AttributeImportConfig),
         ["TextReplace"] = typeof(TextReplaceConfig), ["LayerStandardCheck"] = typeof(LayerStandardCheckConfig),
         ["GridExtract"] = typeof(GridExtractConfig), ["XrefAudit"] = typeof(XrefAuditConfig), ["XrefAttach"] = typeof(XrefAttachConfig),

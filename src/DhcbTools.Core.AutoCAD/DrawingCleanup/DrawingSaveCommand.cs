@@ -29,13 +29,13 @@ public sealed class DrawingSaveCommand : ICoreCommand<DrawingSaveConfig>
         var version = database.OriginalFileVersion;
         if (config.DryRun)
         {
-            return CommandResult.Ok($"[Xem trước] Sẽ lưu đè \"{fileName}\" (giữ định dạng {version}, tạo .bak). Chưa ghi.", 1);
+            return CommandResult.Ok($"[Xem trước] Sẽ lưu đè \"{fileName}\" (giữ định dạng {version}{(config.CreateBackup ? ", tạo .bak" : ", không tạo .bak")}). Chưa ghi.", 1);
         }
 
         var before = File.GetLastWriteTimeUtc(fileName);
         try
         {
-            database.SaveAs(fileName, true, version, database.SecurityParameters);
+            database.SaveAs(fileName, config.CreateBackup, version, database.SecurityParameters);
         }
         catch (Autodesk.AutoCAD.Runtime.Exception ex)
         {
