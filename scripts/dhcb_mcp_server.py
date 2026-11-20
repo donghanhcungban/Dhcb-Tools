@@ -320,7 +320,9 @@ def _run_console(dwg_path: str, console: str, plugin: str, requests: list) -> li
                 json.dump({"query": query, "params": params}, f, ensure_ascii=False)
             script += ["DHCB_QUERY", query_path, out_path]
             out_paths.append(out_path)
-        with open(script_path, "w", encoding="utf-8") as f:
+        # utf-8-sig (có BOM): không có BOM accoreconsole đọc script theo code page ANSI, đường dẫn tiếng Việt
+        # (thư mục tạm/plugin dưới tên người dùng có dấu) bị hỏng — như AcadScriptGen.ScriptEncoding.
+        with open(script_path, "w", encoding="utf-8-sig") as f:
             f.write("\n".join(script + ["QUIT Y"]) + "\n")
         try:
             with _console_slots:

@@ -398,7 +398,9 @@ class OfflineQueryTests(unittest.TestCase):
         seen = {}
 
         def run(args, **kwargs):
-            lines = Path(args[args.index("/s") + 1]).read_text(encoding="utf-8").splitlines()
+            raw = Path(args[args.index("/s") + 1]).read_bytes()
+            seen["bom"] = raw.startswith(b"\xef\xbb\xbf")
+            lines = raw.decode("utf-8-sig").splitlines()
             query_path, out_path = lines[lines.index("DHCB_QUERY") + 1:lines.index("DHCB_QUERY") + 3]
             seen["query"] = json.loads(Path(query_path).read_text(encoding="utf-8"))
             seen["args"] = args
@@ -419,6 +421,8 @@ class OfflineQueryTests(unittest.TestCase):
         self.assertEqual({"query": "layers", "params": {"limit": 2}}, seen["query"])
         self.assertNotEqual(str(self.dwg), seen["args"][seen["args"].index("/i") + 1])  # chỉ mở bản sao
         self.assertIn(f'NETLOAD "{self.plugin}"', seen["script"])
+        # Không BOM thì accoreconsole đọc script theo code page ANSI và làm hỏng đường dẫn có dấu.
+        self.assertTrue(seen["bom"])
 
     def test_ket_qua_khong_phai_object_tra_nguyen(self) -> None:
         run, _seen = self._fake_run([1, 2])
@@ -499,7 +503,7 @@ class SpeedTests(OfflineQueryTests):
         """Giả accoreconsole cho script nhiều DHCB_QUERY: answer(query) -> kết quả, None = không ghi file."""
 
         def run(args, **kwargs):
-            lines = Path(args[args.index("/s") + 1]).read_text(encoding="utf-8").splitlines()
+            lines = Path(args[args.index("/s") + 1]).read_text(encoding="utf-8-sig").splitlines()
             queries = []
             for index, line in enumerate(lines):
                 if line != "DHCB_QUERY":

@@ -30,6 +30,9 @@ Xem [`jobs/nightly.sample.json`](../jobs/nightly.sample.json) (Revit) và
   thoát khác 0 thì bỏ file tạm và ghi `Save:<mode>` *bỏ qua* kèm lý do. `Save` (ghi đè gốc) giữ bản trước ở `<tên>.bak`
   như `SAVEAS` của AutoCAD vẫn làm. Trước bản sửa này, file AutoCAD có bước lỗi vẫn bị lưu đè.
 - `dwgVersion` (chuỗi, mặc định `"2018"`): phiên bản DWG cho `SAVEAS` bên AutoCAD.
+- Đường dẫn có dấu (tiếng Việt) dùng được: script `.scr` ghi UTF-8 **có BOM** (`AcadScriptGen.ScriptEncoding`).
+  Bản trước ghi không BOM, accoreconsole đọc theo code page ANSI nên `SAVEAS` ra file tên hỏng (`á»NG GIÃ“…dwg`)
+  và runner báo "Không thấy file được lưu" dù bước Core đã chạy.
 - `files[]`: `path`, `detachFromCentral`, `worksets` (chỉ mở các workset này), `onlySteps` (lọc step cho riêng file).
   `onlySteps` phải khớp tên trong `steps` (không phân biệt hoa/thường); tên sai trả mã 2 thay vì âm thầm chạy 0 bước.
   `SaveAs` từ chối hai file cùng tên dù nằm ở hai thư mục khác nhau: tách job hoặc đổi tên trước để tránh ghi đè bản sao.
