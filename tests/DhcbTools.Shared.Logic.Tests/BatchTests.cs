@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using DhcbTools.Shared.Logic.Batch;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -244,6 +245,31 @@ public class BatchReportTests
 
 public class AcadScriptGenTests
 {
+    /// <summary>
+    /// accoreconsole đọc .scr không BOM theo code page ANSI: SAVEAS "…\ỐNG GIÓ PODIUM.dwg" ra file tên
+    /// "á»NG GIÃ“ PODIUM.dwg" và runner báo không thấy file lưu (gặp thật 2026-11-20). Script phải có BOM UTF-8
+    /// và giữ nguyên ký tự tiếng Việt.
+    /// </summary>
+    [Fact]
+    public void ScriptGhiUtf8CoBom_GiuDuongDanTiengViet()
+    {
+        var target = @"C:\Dự án\Tháp A\ỐNG GIÓ PODIUM.dhcb-luu-1.dwg";
+        var scr = AcadScriptGen.Build("p.dll", new[] { "s.json" }, target, "log", @"C:\Dự án\Tháp A\ỐNG GIÓ PODIUM.dwg");
+        var path = Path.Combine(Path.GetTempPath(), "dhcb-scr-" + Guid.NewGuid().ToString("N") + ".scr");
+        try
+        {
+            File.WriteAllText(path, scr, AcadScriptGen.ScriptEncoding);
+            var bytes = File.ReadAllBytes(path);
+
+            Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, bytes.Take(3).ToArray());
+            Assert.Contains(target, Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     [Fact]
     public void ScriptCoNetload_Run_SaveAs_Quit()
     {

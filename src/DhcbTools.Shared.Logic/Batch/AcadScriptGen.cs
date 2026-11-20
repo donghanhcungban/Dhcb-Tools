@@ -14,6 +14,13 @@ namespace DhcbTools.Shared.Logic.Batch
     public static class AcadScriptGen
     {
         /// <summary>
+        /// Encoding để ghi file <c>.scr</c>: UTF-8 <b>có BOM</b>. Không có BOM, accoreconsole đọc script theo code page ANSI
+        /// nên đường dẫn tiếng Việt (vd. <c>ỐNG GIÓ.dwg</c>) bị biến thành <c>á»NG GIÃ“.dwg</c> — SAVEAS ghi ra file sai
+        /// tên và runner báo "Không thấy file được lưu" (gặp thật 2026-11-20, AutoCAD 2026). Có BOM (hoặc UTF-16) thì đúng.
+        /// </summary>
+        public static Encoding ScriptEncoding { get; } = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
+
+        /// <summary>
         /// Dòng "Unable to load … assembly." trong output của accoreconsole, hoặc <c>null</c>. Khi NETLOAD thất bại
         /// thì mọi <c>DHCB_RUN</c> sau đó là "Unknown command" và không dòng nào được ghi vào run.jsonl — runner dùng
         /// hàm này để biến "0 OK, 0 lỗi" câm thành một dòng lỗi có tên DLL (đóng vai kỹ sư AutoCAD, §57).

@@ -120,7 +120,7 @@ public static partial class Program
 
             var script = Path.Combine(work, $"{index:D3}.scr");
             File.WriteAllText(script, AcadScriptGen.Build(plugin, stepPaths, saveAs, Path.GetFullPath(runLog), file.Path,
-                plotScript, job.DwgVersion, saveTargetExists, guardedBatch), new UTF8Encoding(false));
+                plotScript, job.DwgVersion, saveTargetExists, guardedBatch), AcadScriptGen.ScriptEncoding);
 
             Console.WriteLine($"[{index}/{job.Files.Count}] {file.Path}");
             var psi = new ProcessStartInfo(console, AcadScriptGen.Arguments(file.Path, script))
