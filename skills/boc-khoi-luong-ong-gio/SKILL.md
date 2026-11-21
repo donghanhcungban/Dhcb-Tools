@@ -80,6 +80,13 @@ Cách script chia đốt (để giải thích khi kỹ sư hỏi):
 
 Dòng cuối script in: số đốt chuẩn, đoạn bù, box, co, mét ống, m², số phụ kiện, **số tuyến chưa xác định**. Kiểm:
 
+- **DIM có tin được không**: `python scripts\kiem-ban-ve.py dim-de -o dim-de.xlsx` (thêm `--dwg FILE.dwg` để đọc
+  ngầm khi AutoCAD đóng, `--vung 1F=x0,y0,x1,y1` để tách tầng). DIM gõ đè chữ khác số đo thì đừng dùng làm chuẩn.
+- **Cộng chuỗi DIM theo tuyến**: `kiem-ban-ve.py dim-cong` — tổng mỗi chuỗi DIM nối tiếp, so với tổng đốt cùng tuyến.
+- **Bẫy đã gặp thật (Podium Tháp A, 2026-11)**: bề rộng ống + bích (840, 1220, 700…) bị lấy làm chiều dài đốt;
+  thân van MFD, mặt cắt trục SEAD, đường viền FCU/box hồi bị nhận thành ống; tê 3 nhánh bị đếm một lần mỗi nhánh.
+  Đốt có L bằng bề rộng (±70) mà lệch DIM là dấu hiệu.
+
 - **So một tuyến với dim trên bản vẽ**: chọn tuyến dài nhất ở trang Chi tiết (cột Tuyến), đối chiếu từng đốt
   với dim — phải khớp kiểu `1400 (box) + 770 + 8×1110`. Lệch là dấu hiệu thiếu block mối nối hoặc sai khung.
 - **Tỉ lệ chưa xác định**: mét "chưa xác định" trên 20 % tổng là dấu hiệu sai khung hoặc sai layer — xem lại bước 1.
