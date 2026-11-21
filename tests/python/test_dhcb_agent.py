@@ -24,6 +24,9 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 
 import dhcb_agent
+import tempfile
+
+os.environ.setdefault("DHCB_JOURNAL_DIR", tempfile.mkdtemp(prefix="dhcb-nhat-ky-test-"))  # nhật ký sửa không ghi vào %APPDATA%
 
 
 class FakeResponse:
@@ -308,6 +311,60 @@ class RunTests(unittest.TestCase):
                 on_tick(3200)
 
         self.assertIn("đang chạy 3 s", out.getvalue())
+
+
+class JournalTests(unittest.TestCase):
+    """Nhật ký sửa: lần chạy thật ghi một dòng JSONL kèm bản xem trước đã duyệt (cùng previewToken)."""
+
+    def setUp(self) -> None:
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.dir = folder.name
+        patcher = mock.patch.dict(os.environ, {"DHCB_JOURNAL_DIR": self.dir})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        dhcb_agent._PREVIEWS.clear()
+
+    def lines(self) -> list:
+        files = [f for f in os.listdir(self.dir) if f.endswith(".jsonl")]
+        if not files:
+            return []
+        with open(os.path.join(self.dir, files[0]), encoding="utf-8") as f:
+            return [json.loads(line) for line in f]
+
+    def test_xem_truoc_roi_chay_that_ghi_ca_truoc_sau(self) -> None:
+        preview = {"success": True, "previewToken": "T1", "summary": "[Xem trước] xoá 2", "messages": ["#1 erase: A, B"]}
+        done = {"success": True, "summary": "Đã xoá 2", "changedIds": [1, 2], "messages": ["xoá A", "xoá B"]}
+        with mock.patch.object(dhcb_agent, "request", side_effect=[preview, done]):
+            dhcb_agent.send("autocad", "EntityEdit", {"dryRun": True, "operations": []})
+            dhcb_agent.send("autocad", "EntityEdit", {"dryRun": False, "operations": []}, document_id="D1", preview_token="T1")
+        (entry,) = self.lines()
+        self.assertEqual(("EntityEdit", "D1", True, [1, 2]), (entry["command"], entry["documentId"], entry["success"], entry["changedIds"]))
+        self.assertEqual(["#1 erase: A, B"], entry["preview"]["messages"])
+        self.assertNotIn("dryRun", entry["config"])
+        self.assertEqual({}, dict(dhcb_agent._PREVIEWS))
+
+    def test_xem_truoc_khong_ghi_file_va_giu_toi_da_100(self) -> None:
+        for i in range(105):
+            dhcb_agent.journal("autocad", {"config": {"dryRun": True}}, {"previewToken": f"T{i}"})
+        dhcb_agent.journal("autocad", {"config": {"dryRun": True}}, {"success": True})
+        self.assertEqual(([], 100, "T5"), (self.lines(), len(dhcb_agent._PREVIEWS), next(iter(dhcb_agent._PREVIEWS))))
+
+    def test_khong_co_thu_muc_hoac_loi_ghi_thi_bo_qua(self) -> None:
+        with mock.patch.dict(os.environ, {"DHCB_JOURNAL_DIR": "", "APPDATA": ""}):
+            self.assertEqual("", dhcb_agent.journal_dir())
+            dhcb_agent.journal("autocad", {"config": {"dryRun": False}}, {"success": True})
+        with mock.patch.dict(os.environ, {"DHCB_JOURNAL_DIR": "", "APPDATA": self.dir}):
+            self.assertTrue(dhcb_agent.journal_dir().endswith("nhat-ky-sua"))
+        with mock.patch.object(dhcb_agent.os, "makedirs", side_effect=OSError("đầy")):
+            dhcb_agent.journal("autocad", {"config": {"dryRun": False}}, "không phải dict")
+        self.assertEqual([], self.lines())
+
+    def test_chay_nen_cung_ghi_nhat_ky(self) -> None:
+        args = mock.Mock(background=True)
+        with mock.patch.object(dhcb_agent, "send_background", return_value={"success": True, "summary": "xong"}):
+            dhcb_agent.run("autocad", "TextReplace", {"dryRun": False}, args, document_id="D2")
+        self.assertEqual(["TextReplace"], [e["command"] for e in self.lines()])
 
 
 class PrintResultTests(unittest.TestCase):

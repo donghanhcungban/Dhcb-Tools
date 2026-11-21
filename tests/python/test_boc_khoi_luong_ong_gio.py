@@ -583,3 +583,84 @@ class TagSpecAndToleTests(unittest.TestCase):
         secs = bog.build_sections(runs, pieces, elbows, bog.fitting_boxes(GEOMETRY, BBOX), LABELS, order="trai-phai")
         firsts = [min(it["x"] for it in c) for _, cl in secs for c in cl]
         self.assertEqual(firsts, sorted(firsts))
+
+
+def piece(code, x, y, length, kind="Đoạn bù", w=400, h=250, u=(1.0, 0.0), width=410):
+    return {"code": code, "x": x, "y": y, "len": length, "kind": kind, "W": w, "H": h, "sys": "SAD", "handle": "H" + code,
+            "run": {"u": u, "w": width}}
+
+
+def rdim(x1, x2, y=600, meas=None, rot=0.0):
+    e = {"type": "RotatedDimension", "xLine1Point": {"x": x1, "y": y}, "xLine2Point": {"x": x2, "y": y},
+         "measurement": abs(x2 - x1) if meas is None else meas}
+    if rot is not None:
+        e["rotationDeg"] = rot
+    return e
+
+
+class CheckTests(unittest.TestCase):
+    def test_dim_sources(self) -> None:
+        ps = [piece("A", 500, 0, 1000), piece("B", 2000, 0, 840), piece("C", 9000, 0, 500), piece("D", 0, 5000, 600, u=(0.0, 1.0))]
+        ents = [rdim(0, 1000, rot=None),                 # khớp A (góc lấy từ hai chân)
+                rdim(1600, 2400),                        # quanh B nhưng đo 800 → lệch
+                rdim(1600, 2400, rot=90),                # sai hướng → bỏ
+                rdim(8000, 8500, y=9000),                # quá xa C theo phương ngang ống
+                {"type": "Line"}, {"type": "RotatedDimension", "measurement": 5}]
+        bog.dim_sources(ps, ents)
+        self.assertEqual([bog.SRC_DIM, "lệch DIM 800", bog.SRC_HINH, bog.SRC_HINH], [p["src"] for p in ps])
+
+    def test_warnings_and_verdict(self) -> None:
+        a, b = piece("A", 0, 0, 1180, kind=bog.STD_LABEL), piece("B", 20, 10, 1180, kind=bog.STD_LABEL)
+        wide = piece("W", 5000, 0, 840, w=800, width=840)
+        inside = piece("F", 20000, 500, 630, kind=bog.STD_LABEL)
+        ok = piece("K", 30000, 0, 700, w=700)
+        for p in (a, b, wide, inside):
+            p["src"] = bog.SRC_HINH
+        ok["src"] = bog.SRC_DIM
+        geo = [{"blockName": "2F_01_DSC_FCU Daikin - AC_FCU 14_6", "extentsMin": {"x": 19000, "y": 0}, "extentsMax": {"x": 21000, "y": 1500}},
+               {"blockName": "FCU xa", "extentsMin": {"x": 19000, "y": 0}, "extentsMax": {"x": 21000, "y": 1500}},
+               {"blockName": "Co 90", "extentsMin": {"x": 0, "y": 0}, "extentsMax": {"x": 9, "y": 9}}]
+        warns = bog.piece_warnings([a, b, wide, inside, ok], geo, bbox=(-100, -100, 25000, 25000))
+        why = {p["code"]: w for p, w in warns}
+        self.assertIn("bề rộng", why["W"])
+        self.assertIn("Trùng tâm với A", why["B"])
+        self.assertIn("AC_FCU", why["F"])
+        self.assertNotIn("K", why)
+        self.assertEqual("CẦN XEM", bog.verdict([a], warns, []))
+        self.assertEqual("ĐẠT", bog.verdict([ok], [], []))
+        self.assertEqual("ĐẠT KÈM CẢNH BÁO", bog.verdict([ok], [], [{"w": 1}]))
+        lech = [dict(ok, src="lệch DIM 5")] + [ok] * 20
+        self.assertEqual("ĐẠT KÈM CẢNH BÁO", bog.verdict(lech, [], []))
+        self.assertEqual("CẦN XEM", bog.verdict(lech[:2], [], []))
+
+    def test_stamp_and_check_sheet(self) -> None:
+        self.assertEqual({}, bog.dwg_stamp(""))
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "a.dwg"
+            f.write_bytes(b"AC1021")
+            st = bog.dwg_stamp(str(f))
+            self.assertEqual((6, 64), (st["size"], len(st["sha256"])))
+            p = piece("A", 0, 0, 840)
+            p["src"] = "lệch DIM 800"
+            (name, rows, _, _), v = bog.check_sheet([p], [(p, "lý do")], [], st, 100.0, 25.0)
+            self.assertEqual(("Kiểm tra", "CẦN XEM"), (name, v))
+            flat = [c for r in rows for c in r]
+            self.assertIn(0.25, flat)
+            self.assertIn(st["sha256"], flat)
+            self.assertEqual("lý do", rows[-1][6])
+            (_, rows, _, _), v = bog.check_sheet([], [], [], {}, None, 0)
+            self.assertIn("(không xác định — đọc từ JSON)", [c for r in rows for c in r])
+
+    def test_main_ghi_sheet_kiem_tra(self) -> None:
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(bog.time, "sleep"):
+            out = Path(d) / "kl.xlsx"
+            dwg = Path(d) / "Tang 2.dwg"
+            dwg.write_bytes(b"x")
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.assertEqual(bog.main(["--bbox=-1000,-1000,25000,25000", "-o", str(out), "--ban-ve", str(dwg),
+                                           "--dien-tich-san", "50"], agent=FakeAgent()), 0)
+            self.assertIn("Kiểm tra:", buf.getvalue())
+            with zipfile.ZipFile(out) as z:
+                names = re.findall(r'<sheet name="([^"]+)"', z.read("xl/workbook.xml").decode())
+            self.assertEqual("Kiểm tra", names[-1])

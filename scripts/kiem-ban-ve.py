@@ -9,6 +9,9 @@ Làm thay các Lisp tiện ích hay dùng (RD, DIMSUM, TLEN, TKB) nhưng chạy 
   để so nhanh với tổng đốt trong bảng khối lượng.
 - ``pl-dai``   **tổng chiều dài** Line + Polyline theo layer (như TLEN) — ống uPVC, ống đồng vẽ bằng nét.
 - ``block``    **đếm block** theo tên (như TKB), tách theo vùng/tầng.
+- ``nhat-ky``  xuất **nhật ký sửa bản vẽ** (mỗi lần chạy thật qua Bridge: lệnh, bản xem trước đã duyệt, kết quả).
+- ``dau``      **dấu phiên bản**: ``--ghi`` lưu SHA-256 của DWG cạnh file khối lượng; không ``--ghi`` thì kiểm bản vẽ
+  đã đổi sau lần bóc chưa (mã thoát 3 = đã đổi).
 
 Vùng: ``--vung 1F=x0,y0,x1,y1`` (lặp lại cho nhiều tầng). Không có vùng = cả bản vẽ.
 
@@ -22,8 +25,11 @@ Ví dụ:
     python scripts/kiem-ban-ve.py dim-cong --vung 2F=-190000,25000,-15000,125000 -o dim-cong.xlsx
     python scripts/kiem-ban-ve.py pl-dai   --layer "uPVC|DP" -o pl.xlsx
     python scripts/kiem-ban-ve.py block    --ten "MFD|FCU|Mieng gio" --vung 1F=... --vung 2F=... -o block.xlsx
+    python scripts/kiem-ban-ve.py nhat-ky  --tu 2026-11-01 -o nhat-ky.xlsx
+    python scripts/kiem-ban-ve.py dau      --kl "KHỐI LƯỢNG ỐNG GIÓ.xlsx" --dwg "PODIUM.dwg" --ghi
 
-Mã thoát 0 = đã ghi file · 1 = không có đối tượng nào khớp · 2 = đầu vào hỏng / không đọc được bản vẽ.
+Mã thoát 0 = đã ghi file / dấu khớp · 1 = không có đối tượng nào khớp · 2 = đầu vào hỏng / không đọc được bản vẽ
+· 3 = bản vẽ đã đổi sau lần đóng dấu.
 """
 
 from __future__ import annotations
@@ -36,6 +42,7 @@ import math
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -259,6 +266,52 @@ def block_counts(inserts: list, regions: list, name_re: str = "", by_layer: bool
     return [{"vung": r, "block": n, "layer": lay, "so_luong": c} for (r, n, lay), c in sorted(acc.items())]
 
 
+# ----------------------------------------------------------------------------- nhat-ky
+def journal_rows(folder: str, since: str = "") -> list:
+    """Đọc mọi *.jsonl trong thư mục nhật ký (dhcb_agent.journal), lọc từ ngày since (YYYY-MM-DD)."""
+    rows = []
+    for f in sorted(Path(folder).glob("*.jsonl")) if folder else []:
+        for line in f.read_text(encoding="utf-8").splitlines():
+            try:
+                e = json.loads(line)
+            except ValueError:
+                continue
+            if since and str(e.get("time", ""))[:10] < since:
+                continue
+            prev = e.get("preview") or {}
+            rows.append({"time": str(e.get("time", "")).replace("T", " "), "app": e.get("app"), "command": e.get("command"),
+                         "success": "có" if e.get("success") else "KHÔNG", "summary": e.get("summary"),
+                         "so_dt": len(e.get("changedIds") or []),
+                         "preview": " | ".join(str(m) for m in (prev.get("messages") or [])[:20]) or prev.get("summary"),
+                         "messages": " | ".join(str(m) for m in (e.get("messages") or [])[:20]) or None,
+                         "documentId": e.get("documentId")})
+    return rows
+
+
+# ----------------------------------------------------------------------------- dau
+def stamp_path(kl: str) -> Path:
+    return Path(kl + ".ban-ve.json")
+
+
+def stamp_check(kl: str, dwg: str, write: bool) -> tuple:
+    """(mã thoát, thông báo). Ghi: lưu dấu DWG + KL. Kiểm: so SHA-256 DWG hiện tại với dấu đã lưu."""
+    cur = _bog.dwg_stamp(dwg)
+    if not cur:
+        return 2, f"Không thấy file DWG: {dwg}"
+    if write:
+        data = {"ban_ve": cur, "khoi_luong": _bog.dwg_stamp(kl) or {"path": kl},
+                "dong_dau_luc": time.strftime("%Y-%m-%d %H:%M:%S")}
+        stamp_path(kl).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+        return 0, f"Đã đóng dấu {stamp_path(kl).name}: bản vẽ {Path(dwg).name} sửa lúc {cur['mtime']}, SHA-256 {cur['sha256'][:12]}…"
+    if not stamp_path(kl).is_file():
+        return 2, f"Chưa có dấu phiên bản cho {kl} — chạy với --ghi sau khi bóc xong."
+    old = json.loads(stamp_path(kl).read_text(encoding="utf-8"))["ban_ve"]
+    if old["sha256"] == cur["sha256"]:
+        return 0, f"KHỚP: bản vẽ chưa đổi từ lúc đóng dấu (sửa lúc {old['mtime']})."
+    return 3, (f"BẢN VẼ ĐÃ ĐỔI sau khi bóc: dấu {old['mtime']} ({old['sha256'][:12]}…), hiện tại {cur['mtime']} "
+               f"({cur['sha256'][:12]}…) — kiểm lại khối lượng.")
+
+
 # ----------------------------------------------------------------------------- Excel
 COLUMNS = {
     "dim-de": [("Vùng", "vung", 12), ("Kết luận", "ket_luan", 22), ("Chữ hiển thị", "chu", 18), ("Số ghi", "so_ghi", 10),
@@ -270,10 +323,14 @@ COLUMNS = {
     "pl-dai": [("Vùng", "vung", 12), ("Layer", "layer", 26), ("Số Line", "so_line", 9), ("Line (m)", "dai_line_m", 11),
                ("Số Polyline", "so_pline", 11), ("Polyline (m)", "dai_pline_m", 12), ("Tổng (m)", "tong_m", 11)],
     "block": [("Vùng", "vung", 12), ("Tên block", "block", 60), ("Layer", "layer", 20), ("Số lượng", "so_luong", 10)],
+    "nhat-ky": [("Thời gian", "time", 19), ("Ứng dụng", "app", 9), ("Lệnh", "command", 16), ("Thành công", "success", 10),
+                ("Kết quả", "summary", 50), ("Số đối tượng", "so_dt", 11), ("Xem trước đã duyệt", "preview", 70),
+                ("Chi tiết", "messages", 70), ("Mô hình (documentId)", "documentId", 34)],
 }
 TOTALS = {"dim-cong": ("tong",), "pl-dai": ("dai_line_m", "dai_pline_m", "tong_m"), "block": ("so_luong",)}
 TITLES = {"dim-de": "DIM gõ đè chữ", "dim-cong": "Cộng chuỗi DIM", "pl-dai": "Chiều dài Line + Polyline",
-          "block": "Thống kê block"}
+          "block": "Thống kê block", "nhat-ky": "Nhật ký sửa bản vẽ"}
+OFFLINE = ("nhat-ky", "dau")
 
 
 def build_sheet(cmd: str, rows: list, source: str, note: str) -> list:
@@ -294,8 +351,13 @@ def build_sheet(cmd: str, rows: list, source: str, note: str) -> list:
 # ----------------------------------------------------------------------------- main
 def main(argv=None, agent=None, mcp=None) -> int:
     ap = argparse.ArgumentParser(description="Kiểm bản vẽ AutoCAD cho bóc khối lượng (chỉ đọc) → Excel")
-    ap.add_argument("lenh", choices=sorted(COLUMNS), help="dim-de | dim-cong | pl-dai | block")
-    ap.add_argument("-o", "--output", required=True, help="file .xlsx")
+    ap.add_argument("lenh", choices=sorted(set(COLUMNS) | set(OFFLINE)),
+                    help="dim-de | dim-cong | pl-dai | block | nhat-ky | dau")
+    ap.add_argument("-o", "--output", help="file .xlsx (mọi lệnh trừ dau)")
+    ap.add_argument("--kl", help="dau: file khối lượng")
+    ap.add_argument("--ghi", action="store_true", help="dau: ghi dấu mới thay vì kiểm")
+    ap.add_argument("--tu", default="", help="nhat-ky: từ ngày YYYY-MM-DD")
+    ap.add_argument("--thu-muc", help="nhat-ky: thư mục nhật ký (mặc định như dhcb_agent)")
     ap.add_argument("--vung", action="append", default=[], help="TÊN=xmin,ymin,xmax,ymax (lặp lại cho nhiều vùng)")
     ap.add_argument("--dwg", help="đọc ngầm bản sao DWG bằng accoreconsole")
     ap.add_argument("--entities", help="JSON query entities")
@@ -308,6 +370,33 @@ def main(argv=None, agent=None, mcp=None) -> int:
     ap.add_argument("--source", default="", help="tên bản vẽ ghi vào bảng")
     args = ap.parse_args(argv)
     cmd = args.lenh
+    if cmd == "dau":
+        if not args.kl or not args.dwg:
+            print("Lỗi đầu vào: dau cần --kl và --dwg", file=sys.stderr)
+            return 2
+        code, msg = stamp_check(args.kl, args.dwg, args.ghi)
+        print(msg, file=sys.stderr if code == 2 else sys.stdout)
+        return code
+    if not args.output:
+        print(f"Lỗi đầu vào: lệnh {cmd} cần -o FILE.xlsx", file=sys.stderr)
+        return 2
+    if cmd == "nhat-ky":
+        if args.thu_muc:
+            folder = args.thu_muc
+        else:
+            if agent is None:  # pragma: no cover — nhánh chạy thật, test truyền agent giả
+                sys.path.insert(0, str(HERE))
+                import dhcb_agent as agent
+            folder = agent.journal_dir()
+        rows = journal_rows(folder, args.tu)
+        if not rows:
+            print(f"Không có dòng nhật ký nào trong {folder or '(chưa đặt thư mục)'}"
+                  + (f" từ {args.tu}" if args.tu else "") + ".", file=sys.stderr)
+            return 1
+        write_xlsx(Path(args.output), build_sheet(cmd, rows, folder, "Mỗi dòng là một lần chạy THẬT qua Bridge/MCP; "
+                                                  "'Xem trước đã duyệt' là bản preview cùng previewToken."))
+        print(f"Đã ghi {args.output}: {len(rows)} lần sửa.")
+        return 0
     try:
         regions = [parse_region(v) for v in args.vung]
         if args.entities or args.inserts:

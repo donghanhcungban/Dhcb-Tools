@@ -209,7 +209,7 @@ class SheetTests(unittest.TestCase):
         self.assertEqual(3, len(rows))
 
 
-class MainTests(unittest.TestCase):
+class _CliBase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -226,6 +226,8 @@ class MainTests(unittest.TestCase):
         p.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         return str(p)
 
+
+class MainTests(_CliBase):
     def test_files_mode_all_commands(self):
         ents = self.jfile("e.json", {"entities": [dim("A", 0, 1110, text="840"), dim("B", 1110, 2220), line("L", 0, 0, 1000, 0),
                                                   pline("P", 500)]})
@@ -289,6 +291,52 @@ class MainTests(unittest.TestCase):
         agent2 = Agent({"drawing_info": {}, "inserts": {"error": "Bridge tắt"}})
         code, _, err = self.run_main(["block", "-o", out], agent=agent2)
         self.assertEqual((2, True), (code, "Bridge tắt" in err))
+
+
+class JournalStampTests(_CliBase):
+    def test_nhat_ky(self):
+        folder = self.dir / "nk"
+        folder.mkdir()
+        entries = [{"time": "2026-10-30T08:00:00", "command": "Cu", "success": True},
+                   {"time": "2026-11-20T09:15:00", "app": "autocad", "command": "EntityEdit", "success": True,
+                    "summary": "Đã xoá 2", "changedIds": [1, 2], "messages": ["xoá A"],
+                    "preview": {"messages": ["#1 erase: A, B"]}, "documentId": "D1"},
+                   {"time": "2026-11-21T10:00:00", "command": "TextReplace", "success": False, "preview": {"summary": "sẽ thay 1"}}]
+        (folder / "2026-11.jsonl").write_text("\n".join(json.dumps(e, ensure_ascii=False) for e in entries) + "\nhỏng\n",
+                                              encoding="utf-8")
+        rows = kbv.journal_rows(str(folder), "2026-11-01")
+        self.assertEqual(["EntityEdit", "TextReplace"], [r["command"] for r in rows])
+        self.assertEqual(("có", 2, "#1 erase: A, B", "xoá A"), (rows[0]["success"], rows[0]["so_dt"], rows[0]["preview"], rows[0]["messages"]))
+        self.assertEqual(("KHÔNG", "sẽ thay 1", None), (rows[1]["success"], rows[1]["preview"], rows[1]["messages"]))
+        self.assertEqual([], kbv.journal_rows(""))
+        out = self.dir / "nk.xlsx"
+        code, msg, _ = self.run_main(["nhat-ky", "--thu-muc", str(folder), "-o", str(out)])
+        self.assertEqual((0, True), (code, "3 lần sửa" in msg))
+        self.assertIn("EntityEdit", sheet_rows(out))
+        agent = type("A", (), {"journal_dir": staticmethod(lambda: str(self.dir / "trong"))})
+        code, _, err = self.run_main(["nhat-ky", "--tu", "2026-11-01", "-o", str(out)], agent=agent)
+        self.assertEqual((1, True), (code, "từ 2026-11-01" in err))
+        code, _, err = self.run_main(["nhat-ky", "--thu-muc", "", "-o", str(out)], agent=agent)
+        self.assertEqual(1, code)
+        self.assertEqual(2, self.run_main(["nhat-ky"])[0])
+
+    def test_dau_phien_ban(self):
+        dwg, kl = self.dir / "PODIUM.dwg", self.dir / "KL.xlsx"
+        dwg.write_bytes(b"ban 1")
+        kl.write_bytes(b"kl")
+        self.assertEqual(2, self.run_main(["dau", "--kl", str(kl)])[0])
+        code, _, err = self.run_main(["dau", "--kl", str(kl), "--dwg", str(self.dir / "khong.dwg")])
+        self.assertEqual((2, True), (code, "Không thấy file DWG" in err))
+        code, _, err = self.run_main(["dau", "--kl", str(kl), "--dwg", str(dwg)])
+        self.assertEqual((2, True), (code, "Chưa có dấu" in err))
+        code, msg, _ = self.run_main(["dau", "--kl", str(kl), "--dwg", str(dwg), "--ghi"])
+        self.assertEqual((0, True), (code, "Đã đóng dấu" in msg))
+        self.assertTrue(kbv.stamp_path(str(kl)).is_file())
+        code, msg, _ = self.run_main(["dau", "--kl", str(kl), "--dwg", str(dwg)])
+        self.assertEqual((0, True), (code, "KHỚP" in msg))
+        dwg.write_bytes(b"ban 2 da sua")
+        code, msg, _ = self.run_main(["dau", "--kl", str(kl), "--dwg", str(dwg)])
+        self.assertEqual((3, True), (code, "BẢN VẼ ĐÃ ĐỔI" in msg))
 
 
 if __name__ == "__main__":
