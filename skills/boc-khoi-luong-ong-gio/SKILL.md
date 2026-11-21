@@ -105,7 +105,22 @@ Nói tổng mét ống và m² (có và không hao hụt), số đốt chuẩn /
 lý do có thể. File Excel có 8 trang: Tổng hợp (công thức sống theo hệ + kích thước, ô hao hụt S3), **Theo mẫu**
 (đúng cột Sheet1 của bản bóc tay: cụm xếp **trái → phải trên mặt bằng** — `--order truc` để gom theo trục/hệ như cũ —, TT chạy liên tục từ đầu gần van chặn lửa — cửa trục — ra ngoài,
 xuyên qua co, giảm và gót giày, mỗi cụm đánh lại từ 1, mục giống nhau liền nhau gộp `12~19`), Chi tiết (STT, mã đốt `SEAD-001`, tuyến, nẹp, loại), Đoạn bù & box, Co, Phụ kiện, Chưa xác
-định, Ghi chú.
+định, Ghi chú, **Kiểm tra**.
+
+**Trang Kiểm tra — đọc trước khi báo số** (cột *Nguồn* ở trang Chi tiết):
+- mỗi đốt có nguồn: *DIM khớp* (DIM song song quanh đốt đo đúng L ±15) · *lệch DIM <số>* · *đo trên hình* (không DIM);
+- **Kết luận**: ĐẠT · ĐẠT KÈM CẢNH BÁO (có đốt lệch DIM hoặc tuyến thiếu kích thước) · CẦN XEM (có cảnh báo, hoặc
+  > 10 % đốt lệch DIM) — CẦN XEM thì xử lý từng dòng cảnh báo trước khi giao;
+- cảnh báo tự động: chiều dài ≈ bề rộng ống/bích mà không khớp DIM · hai đốt trùng tâm · đốt nằm trong block thiết bị
+  (FCU, MFD, quạt, van). Thử trên Podium Tháp A tầng 2: bắt đúng cả 3 loại lỗi đã tìm tay (đốt ảo trong FCU, tê RAD
+  đếm 3 lần, đoạn SEAD lấy nhầm bề rộng 700/770);
+- `--dien-tich-san <m²>` in thêm tỉ lệ m² tôn / m² sàn để so giữa các tầng;
+- dấu phiên bản: SHA-256 + giờ sửa của DWG nguồn. Sau khi giao file khối lượng, đóng dấu
+  `python scripts\kiem-ban-ve.py dau --kl "KHỐI LƯỢNG ….xlsx" --dwg "BẢN VẼ.dwg" --ghi`; lần sau chạy không `--ghi` để
+  biết bản vẽ đã đổi chưa (mã thoát 3 = đã đổi, phải bóc/kiểm lại).
+
+Mọi lần sửa bản vẽ qua Bridge/MCP (chạy thật) được ghi nhật ký `%APPDATA%\DHCB\nhat-ky-sua\YYYY-MM.jsonl` kèm bản xem
+trước đã duyệt; xuất Excel: `python scripts\kiem-ban-ve.py nhat-ky --tu 2026-11-01 -o nhat-ky.xlsx`.
 
 ### 5. Số TT + DIM lên bản vẽ (khi kỹ sư muốn kiểm trên CAD)
 

@@ -15,6 +15,9 @@ import unittest
 from contextlib import contextmanager, redirect_stdout, redirect_stderr
 from pathlib import Path
 from unittest import mock
+import os
+
+os.environ.setdefault("DHCB_JOURNAL_DIR", tempfile.mkdtemp(prefix="dhcb-nhat-ky-test-"))  # nhật ký sửa không ghi vào %APPDATA%
 
 SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 sys.path.insert(0, str(SCRIPTS))

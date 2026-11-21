@@ -20,6 +20,10 @@ sys.path.insert(0, str(ROOT / "tools" / "autocad-mcp-server"))
 import dhcb_agent
 import dhcb_ai
 import panel_api
+import os
+import tempfile
+
+os.environ.setdefault("DHCB_JOURNAL_DIR", tempfile.mkdtemp(prefix="dhcb-nhat-ky-test-"))  # nhật ký sửa không ghi vào %APPDATA%
 
 
 class ClientQualityTests(unittest.TestCase):

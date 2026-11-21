@@ -20,6 +20,9 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 
 import dhcb_ai
+import os
+
+os.environ.setdefault("DHCB_JOURNAL_DIR", tempfile.mkdtemp(prefix="dhcb-nhat-ky-test-"))  # nhật ký sửa không ghi vào %APPDATA%
 
 
 class AppdataTests(unittest.TestCase):

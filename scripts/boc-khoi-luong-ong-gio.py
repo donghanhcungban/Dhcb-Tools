@@ -952,6 +952,119 @@ class F(str):
     """Ô công thức (không có dấu `=` đầu)."""
 
 
+# ── Kiểm tra: nguồn từng đốt, cảnh báo, kết luận, dấu phiên bản bản vẽ ──────
+
+SRC_DIM, SRC_HINH, SRC_LECH = "DIM khớp", "đo trên hình", "lệch DIM"
+EQUIP_RE = re.compile(r"FCU|AHU|PAU|ERV|MFD|DAMPER|FAN|QUAT|VCD|AC_FCU", re.I)
+VERDICTS = ("ĐẠT", "ĐẠT KÈM CẢNH BÁO", "CẦN XEM")
+
+
+def _dims(entities: list) -> list:
+    """(x giữa, y giữa, góc đo rad, số đo) của mọi DIM có hai điểm chân."""
+    out = []
+    for e in entities:
+        a, b = e.get("xLine1Point"), e.get("xLine2Point")
+        if "Dimension" not in str(e.get("type", "")) or not a or not b or e.get("measurement") is None:
+            continue
+        ang = math.radians(float(e["rotationDeg"])) if e.get("rotationDeg") is not None else \
+            math.atan2(b["y"] - a["y"], b["x"] - a["x"])
+        out.append(((a["x"] + b["x"]) / 2, (a["y"] + b["y"]) / 2, ang, float(e["measurement"])))
+    return out
+
+
+def dim_sources(pieces: list, entities: list, tol: float = 15, side: float = 2500) -> None:
+    """Gắn p['src'] cho từng đốt: DIM khớp (DIM song song, đặt quanh đốt, số đo = L ± tol) · lệch DIM <số>
+    (có DIM quanh đốt nhưng số khác) · đo trên hình (không có DIM). Đốt không khớp DIM là chỗ phải nhìn lại."""
+    dims = _dims(entities)
+    for p in pieces:
+        ux, uy = p["run"]["u"]
+        w, length = p["run"].get("w", 0), p["len"]
+        src = None
+        for mx, my, ang, meas in dims:
+            if abs(math.sin(ang - math.atan2(uy, ux))) > 0.05:
+                continue
+            dx, dy = mx - p["x"], my - p["y"]
+            if abs(dx * ux + dy * uy) > max(200, length / 2) or abs(-dx * uy + dy * ux) > w / 2 + side:
+                continue
+            if abs(meas - length) <= tol:
+                src = SRC_DIM
+                break
+            src = src or f"{SRC_LECH} {round(meas)}"
+        p["src"] = src or SRC_HINH
+
+
+def piece_warnings(pieces: list, geometry: list, bbox=None, width_tol: float = 70, dup: float = 60) -> list:
+    """Bẫy đã gặp thật khi bóc (Podium Tháp A, 2026-11), mỗi bẫy một dòng (đốt, lý do):
+    - chiều dài ≈ bề rộng ống (+ bích) mà không khớp DIM — lấy nhầm nét ngang làm cạnh ống;
+    - hai đốt trùng tâm, cùng chiều dài — một đoạn bị tính nhiều lần (tê 3 nhánh, nét vẽ chồng);
+    - tâm đốt nằm trong block thiết bị (FCU, MFD, quạt, van) — đường viền thiết bị bị nhận là ống."""
+    out = []
+    for p in pieces:
+        if p.get("src") != SRC_DIM and p["kind"] != STD_LABEL and \
+                any(v and abs(p["len"] - v) <= width_tol for v in (p["W"], p["H"], p["run"].get("w"))):
+            out.append((p, "Chiều dài ≈ bề rộng ống/bích, không khớp DIM — kiểm có lấy nhầm nét ngang làm chiều dài"))
+    seen = sorted(pieces, key=lambda p: (round(p["x"] / dup), round(p["y"] / dup)))
+    for a, b in zip(seen, seen[1:]):
+        if a["len"] == b["len"] and math.hypot(a["x"] - b["x"], a["y"] - b["y"]) <= dup:
+            out.append((b, f"Trùng tâm với {a['code']} — một đoạn bị tính hai lần?"))
+    equip = []
+    for g in geometry:
+        lo, hi = g.get("extentsMin"), g.get("extentsMax")
+        if lo and hi and EQUIP_RE.search(str(g.get("blockName", ""))) and \
+                (bbox is None or in_box((lo["x"] + hi["x"]) / 2, (lo["y"] + hi["y"]) / 2, bbox)):
+            equip.append((lo, hi, g["blockName"]))
+    for p in pieces:
+        for lo, hi, name in equip:
+            if lo["x"] + 20 < p["x"] < hi["x"] - 20 and lo["y"] + 20 < p["y"] < hi["y"] - 20:
+                out.append((p, f"Nằm trong block thiết bị {family_part(name)[:40]} — đường viền thiết bị bị nhận là ống?"))
+                break
+    return out
+
+
+def verdict(pieces: list, warns: list, unsized: list) -> str:
+    """ĐẠT: không cảnh báo, không đốt lệch DIM, không tuyến thiếu kích thước. CẦN XEM: có cảnh báo, hoặc > 10 % đốt
+    lệch DIM. Còn lại ĐẠT KÈM CẢNH BÁO."""
+    lech = sum(1 for p in pieces if str(p.get("src", "")).startswith(SRC_LECH))
+    if warns or lech > 0.1 * max(len(pieces), 1):
+        return VERDICTS[2]
+    return VERDICTS[1] if lech or unsized else VERDICTS[0]
+
+
+def dwg_stamp(path: str) -> dict:
+    """Dấu phiên bản bản vẽ nguồn (SHA-256, cỡ, giờ sửa) — để biết khối lượng còn khớp bản vẽ không."""
+    p = Path(path)
+    if not path or not p.is_file():
+        return {}
+    import hashlib
+    h = hashlib.sha256()
+    with p.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    st = p.stat()
+    return {"path": str(p), "sha256": h.hexdigest(), "size": st.st_size,
+            "mtime": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime))}
+
+
+def check_sheet(pieces: list, warns: list, unsized: list, stamp: dict, floor_area: float | None, area: float) -> tuple:
+    src = collections.Counter("lệch DIM" if str(p.get("src", "")).startswith(SRC_LECH) else p.get("src", SRC_HINH)
+                              for p in pieces)
+    v = verdict(pieces, warns, unsized)
+    rows = [["KIỂM TRA KHỐI LƯỢNG — nguồn từng đốt, cảnh báo, phiên bản bản vẽ"], [],
+            ["Kết luận", v], ["Số đốt", len(pieces)], [f"  {SRC_DIM}", src[SRC_DIM]], [f"  {SRC_LECH}", src[SRC_LECH]],
+            [f"  {SRC_HINH}", src[SRC_HINH]], ["Tuyến thiếu kích thước (SỐ ƯỚC, chưa tính)", len(unsized)],
+            ["Cảnh báo", len(warns)]]
+    if floor_area:
+        rows.append(["m² tôn / m² sàn", round(area / floor_area, 3)])
+    rows += [["Bản vẽ nguồn", stamp.get("path", "(không xác định — đọc từ JSON)")],
+             ["SHA-256", stamp.get("sha256")], ["Sửa lúc", stamp.get("mtime")], [],
+             ["STT", "Mã đốt", "Hệ", "Kích thước", "Dài (mm)", "Nguồn", "Cảnh báo", "X", "Y", "Handle"]]
+    styles = {1: BOLD, 3: BOLD, len(rows): HEAD}
+    for i, (p, why) in enumerate(warns, 1):
+        rows.append([i, p["code"], p["sys"], f"{p['W']}x{p['H']}", p["len"], p.get("src"), why, round(p["x"]),
+                     round(p["y"]), p["handle"]])
+    return ("Kiểm tra", rows, [34, 12, 8, 12, 9, 16, 70, 12, 12, 12], styles), v
+
+
 def col_name(n: int) -> str:
     s = ""
     while n:
@@ -1049,7 +1162,7 @@ def build_sheets(pieces: list, elbows: list, unsized: list, fittings: collection
     det = [["CHI TIẾT TỪNG ĐỐT ỐNG GIÓ — đốt chuẩn theo nẹp (TDC 1110, C/V 1180), đoạn bù, box bít đầu"], [],
            ["STT", "Mã đốt", "Tuyến", "Hệ", "Kích thước", "R (mm)", "C (mm)", "Nẹp", "Đốt tối đa (mm)", "Loại",
             "Dài (mm)", "Dài (m)", "Chu vi (m)", "Diện tích (m²)", "X tâm", "Y tâm", "Handle cạnh tuyến",
-            "Cách tag (mm)", "Ghi chú", "Bọc / ghi thêm (tag)", "Độ dày tole (mm)"]]
+            "Cách tag (mm)", "Ghi chú", "Bọc / ghi thêm (tag)", "Độ dày tole (mm)", "Nguồn"]]
     for p in pieces:
         r = len(det) + 1
         cap = f"+F{r}*G{r}/1000000" if p["kind"] == BOX_LABEL else ""  # box bít một đầu: cộng tấm bít R×C
@@ -1057,7 +1170,7 @@ def build_sheets(pieces: list, elbows: list, unsized: list, fittings: collection
                     p["dot"], p["kind"], p["len"], F(f"K{r}/1000"), F(f"2*(F{r}+G{r})/1000"),
                     F(f"ROUND(L{r}*M{r}{cap},3)"), round(p["x"]), round(p["y"]), p["handle"], p["tagDist"], p["note"],
                     " ".join(x for x in (p.get("ei", ""), p.get("spec", "") if "EI" not in p.get("spec", "") else "") if x) or None,
-                    p.get("tole", tole_thickness((p["W"], p["H"]), p.get("ei", "")))])
+                    p.get("tole", tole_thickness((p["W"], p["H"]), p.get("ei", ""))), p.get("src")])
     last = len(det)
     det.append([None] * 10 + ["Tổng", F(f"SUM(L4:L{last})"), None, F(f"SUM(N4:N{last})")])
 
@@ -1166,7 +1279,7 @@ def build_sheets(pieces: list, elbows: list, unsized: list, fittings: collection
              ["• Co không nối tuyến nào có kích thước để '?' — không vào trang Tổng hợp."]]
     sample = [("Theo mẫu", *sample_rows(sections))] if sections else []
     return [("Tổng hợp", tot, [6, 34, 8, 18, 8, 8, 7, 10, 10, 10, 11, 10, 12, 10, 11, 8, 11, 12, 14], styles_tot)] + sample + [
-            ("Chi tiết", det, [6, 11, 7, 7, 12, 8, 8, 6, 10, 12, 9, 9, 10, 12, 12, 12, 16, 12, 24, 22, 10], {1: BOLD, 3: HEAD, len(det): TOTAL}),
+            ("Chi tiết", det, [6, 11, 7, 7, 12, 8, 8, 6, 10, 12, 9, 9, 10, 12, 12, 12, 16, 12, 24, 22, 10, 16], {1: BOLD, 3: HEAD, len(det): TOTAL}),
             ("Đoạn bù & box", fill, [6, 13, 8, 12, 10, 10, 12, 14], {1: BOLD, 3: HEAD, len(fill): TOTAL}),
             ("Co", co, [6, 9, 9, 7, 12, 8, 8, 8, 6, 12, 10, 12, 12, 12, 30, 12, 9, 10], {1: BOLD, 3: HEAD, len(co): TOTAL}),
             ("Phụ kiện", fit, [6, 28, 30, 10, 7], {1: BOLD, 3: HEAD, len(fit): TOTAL}),
@@ -1232,6 +1345,8 @@ def main(argv=None, agent=None) -> int:
     ap.add_argument("--source", default="", help="tên bản vẽ ghi vào bảng")
     ap.add_argument("--lsp", help="ghi thêm file AutoLISP vẽ số TT + DIM chiều dài đốt lên bản vẽ (lệnh DHCB_KL_GHI)")
     ap.add_argument("--text-height", type=float, default=150, help="cao chữ số TT trong file LISP (mặc định 150)")
+    ap.add_argument("--ban-ve", help="đường dẫn DWG nguồn để đóng dấu phiên bản (SHA-256) khi đọc từ JSON")
+    ap.add_argument("--dien-tich-san", type=float, help="m² sàn của vùng bóc — in thêm tỉ lệ m² tôn / m² sàn")
     ap.add_argument("--order", choices=("trai-phai", "truc"), default="trai-phai",
                     help="thứ tự cụm trang Theo mẫu: trai-phai = theo vị trí trên mặt bằng (mặc định); truc = gom theo trục/hệ")
     args = ap.parse_args(argv)
@@ -1249,6 +1364,8 @@ def main(argv=None, agent=None) -> int:
                 import dhcb_agent as agent
             entities, texts, geometry, name = fetch_live(agent)
             source = args.source or name
+            if not args.ban_ve:
+                args.ban_ve = str(agent.request("autocad", "POST", "/query", {"query": "drawing_info"}, timeout=60).get("filename") or "")
     except (OSError, ValueError, RuntimeError, KeyError) as ex:
         print(f"Lỗi đầu vào: {ex}", file=sys.stderr)
         return 2
@@ -1272,18 +1389,23 @@ def main(argv=None, agent=None) -> int:
         print("Không tìm thấy đoạn ống nào có kích thước — kiểm --bbox và --layer-prefix.", file=sys.stderr)
         return 1
     sections = build_sections(runs, pieces, elbows, boxes, shaft_labels(texts, bbox), args.order)
-    write_xlsx(Path(args.output), build_sheets(pieces, elbows, unsized, fittings, source, args.waste, sections))
+    dim_sources(pieces, [e for e in entities if bbox is None or not e.get("dimLinePoint")
+                         or in_box(e["dimLinePoint"]["x"], e["dimLinePoint"]["y"], bbox)])
+    warns = piece_warnings(pieces, geometry, bbox)
 
     kinds = collections.Counter(p["kind"] for p in pieces)
     length = sum(p["len"] for p in pieces if p["kind"] != BOX_LABEL) / 1000
     area = sum(2 * (p["W"] + p["H"]) / 1e6 * p["len"] + (p["W"] * p["H"] / 1e6 if p["kind"] == BOX_LABEL else 0)
                for p in pieces)
     area += sum(2 * (e["W"] + e["H"]) / 1e6 * e["W"] * math.tan(math.radians(e["angle"] / 2)) for e in elbows if e["W"])
+    check, v = check_sheet(pieces, warns, unsized, dwg_stamp(args.ban_ve or ""), args.dien_tich_san, area)
+    write_xlsx(Path(args.output), build_sheets(pieces, elbows, unsized, fittings, source, args.waste, sections) + [check])
     print(f"Đã ghi {args.output}: {kinds[STD_LABEL]} đốt chuẩn, {kinds[FILL_LABEL]} đoạn bù, {kinds[BOX_LABEL]} box bít đầu "
           f"trên {len({id(p['run']) for p in pieces})} tuyến ({length:.2f} m ống), {len(elbows)} co, {area:.2f} m² tôn "
           f"(+{args.waste:.0%}: {area * (1 + args.waste):.2f} m²), {sum(fittings.values())} phụ kiện, "
           f"{len(unsized)} tuyến chưa xác định ({sum(r['t1'] - r['t0'] for r in unsized) / 1000:.2f} m), "
-          f"bỏ {flex} mảnh ống mềm.")
+          f"bỏ {flex} mảnh ống mềm. Kiểm tra: {v}, {len(warns)} cảnh báo "
+          f"({sum(1 for p in pieces if p['src'] == SRC_DIM)}/{len(pieces)} đốt khớp DIM).")
     if args.lsp:
         n_txt, n_dim = write_lsp(Path(args.lsp), sections, args.text_height)
         print(f"Đã ghi {args.lsp}: {n_txt} số TT, {n_dim} DIM — APPLOAD rồi gõ DHCB_KL_GHI (xoá: DHCB_KL_XOA).")

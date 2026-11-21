@@ -18,12 +18,17 @@ Cách dùng:
     python dhcb_agent.py autocad LayerExport --output C:/tmp/layers.csv
     python dhcb_agent.py autocad exec GridExtract --config '{"gridLayer":"AXIS","outputPath":"C:/tmp/grids.csv"}'
 
+Nhật ký sửa: mỗi lần chạy THẬT (dryRun:false) qua send/run ghi một dòng JSONL vào %DHCB_JOURNAL_DIR% hoặc
+%APPDATA%/DHCB/nhat-ky-sua/YYYY-MM.jsonl (lệnh, documentId, cấu hình, kết quả, bản xem trước cùng previewToken).
+Xuất Excel: python scripts/kiem-ban-ve.py nhat-ky -o nhat-ky.xlsx
+
 CLI luôn xem trước nếu không có --no-dry-run, kể cả khi JSON chứa dryRun:false.
 Với raw, giữ documentId đã nhận từ document_context trong cả preview và lần ghi thật;
 không lấy ID mới để vượt qua E-DOCUMENT-CHANGED. --background cũng giữ nguyên ID này.
 """
 
 import argparse
+import collections
 import http.client
 import json
 import time
@@ -138,6 +143,49 @@ def request(app: str, method: str, path: str, payload=None, timeout: int = 35) -
         return {"success": False, "outcomeUnknown": path == "/execute", "summary": summary}
 
 
+# ── Nhật ký sửa bản vẽ/mô hình ────────────────────────────────────────────────
+# Mỗi lần chạy THẬT (dryRun:false) ghi một dòng JSONL: lệnh, mô hình đích, cấu hình, kết quả, và bản xem trước
+# đã duyệt (cùng previewToken) — tức "trước/sau" mà kỹ sư đã đồng ý. Ghi nhật ký không bao giờ làm hỏng lệnh.
+_PREVIEWS: "collections.OrderedDict[str, dict]" = collections.OrderedDict()
+JOURNAL_KEEP = 200
+
+
+def journal_dir() -> str:
+    """%DHCB_JOURNAL_DIR% hoặc %APPDATA%/DHCB/nhat-ky-sua; rỗng = không ghi."""
+    if os.environ.get("DHCB_JOURNAL_DIR"):
+        return os.environ["DHCB_JOURNAL_DIR"]
+    appdata = os.environ.get("APPDATA")
+    return os.path.join(appdata, "DHCB", "nhat-ky-sua") if appdata else ""
+
+
+def journal(app: str, payload: dict, result) -> None:
+    try:
+        cfg = payload.get("config") or {}
+        res = result if isinstance(result, dict) else {}
+        messages = list(res.get("messages") or [])[:JOURNAL_KEEP]
+        if cfg.get("dryRun") is not False:
+            if res.get("previewToken"):
+                _PREVIEWS[res["previewToken"]] = {"summary": res.get("summary"), "messages": messages}
+                while len(_PREVIEWS) > 100:
+                    _PREVIEWS.popitem(last=False)
+            return
+        folder = journal_dir()
+        if not folder:
+            return
+        entry = {"time": time.strftime("%Y-%m-%dT%H:%M:%S"), "app": app, "command": payload.get("command"),
+                 "documentId": payload.get("documentId"), "document": res.get("documentTitle") or res.get("document"),
+                 "config": json.dumps({k: v for k, v in cfg.items() if k != "dryRun"}, ensure_ascii=False)[:4000],
+                 "preview": _PREVIEWS.pop(payload.get("previewToken"), None),
+                 "success": res.get("success"), "summary": res.get("summary"),
+                 "changedIds": list(res.get("changedIds") or [])[:JOURNAL_KEEP * 5], "messages": messages,
+                 "errors": res.get("errors")}
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, time.strftime("%Y-%m") + ".jsonl"), "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
+    except (OSError, TypeError, ValueError, AttributeError):
+        pass
+
+
 def send(app: str, command: str, config: dict, timeout_seconds: int = 0, *, document_id=None, preview_token=None) -> dict:
     """Chạy một lệnh. timeout_seconds > 0 thì xin server chờ lâu hơn mặc định 30 s —
     cần cho lệnh nặng như SleeveAuto/AutoRoute trên model thật (giai đoạn 10.5)."""
@@ -150,8 +198,10 @@ def send(app: str, command: str, config: dict, timeout_seconds: int = 0, *, docu
         payload["timeoutSeconds"] = timeout_seconds
 
     # Client phải chờ lâu hơn server một chút, nếu không chính client bỏ đi trước khi server kịp trả lời.
-    return request(app, "POST", "/execute", payload,
-                   timeout=timeout_seconds + 10 if timeout_seconds > 0 else 35)
+    result = request(app, "POST", "/execute", payload,
+                     timeout=timeout_seconds + 10 if timeout_seconds > 0 else 35)
+    journal(app, payload, result)
+    return result
 
 
 def send_background(app: str, command: str, config: dict,
@@ -207,9 +257,12 @@ def send_background(app: str, command: str, config: dict,
 def run(app: str, command: str, config: dict, args, *, document_id=None, preview_token=None) -> dict:
     """Một chỗ duy nhất quyết định chạy đồng bộ hay chạy nền, để ba lối gọi lệnh cư xử giống nhau."""
     if getattr(args, "background", False):
-        return send_background(app, command, config,
-                               on_tick=lambda ms: print(f"  … đang chạy {ms / 1000:.0f} s", flush=True),
-                               document_id=document_id, preview_token=preview_token)
+        result = send_background(app, command, config,
+                                 on_tick=lambda ms: print(f"  … đang chạy {ms / 1000:.0f} s", flush=True),
+                                 document_id=document_id, preview_token=preview_token)
+        journal(app, {"command": command, "config": config, "documentId": document_id, "previewToken": preview_token},
+                result)
+        return result
     return send(app, command, config, document_id=document_id, preview_token=preview_token)
 
 
